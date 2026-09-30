@@ -13,7 +13,7 @@ import CompletedList from '@/components/CompletedList';
 import NewBadgeToast from '@/components/NewBadgeToast';
 import AuthModal from '@/components/AuthModal';
 import Leaderboard from '@/components/Leaderboard';
-import { Sparkles, LogOut, Globe } from 'lucide-react';
+import { Sparkles, LogOut, Globe, Crown } from 'lucide-react';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -147,10 +147,13 @@ export default function Home() {
 
   if (!mounted || !profile || !filters) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="min-h-screen bg-freak-bg flex items-center justify-center">
         <div className="text-center">
-          <Sparkles className="w-10 h-10 text-ie-red mx-auto animate-bounce" />
-          <p className="mt-3 text-gray-600 font-medium">Loading Freakend...</p>
+          <div className="relative mx-auto mb-4 w-16 h-16">
+            <Crown className="w-16 h-16 text-freak-yellow animate-neon-pulse" />
+            <Sparkles className="w-6 h-6 text-freak-pink absolute -top-1 -right-2 animate-pulse" />
+          </div>
+          <p className="mt-3 text-white/80 font-bold tracking-wider uppercase">Loading Freakend...</p>
         </div>
       </main>
     );
@@ -161,34 +164,37 @@ export default function Home() {
   const badge = currentBadge ? BADGES.find((b) => b.id === currentBadge) : undefined;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-ie-red text-white p-2 rounded-lg">
-              <Sparkles className="w-5 h-5" />
+    <main className="min-h-screen bg-freak-bg">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-freak-bg/90 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-freak-pink to-freak-purple flex items-center justify-center shadow-neon-pink">
+                <Crown className="w-5 h-5 text-white" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-freak-yellow rounded-full animate-pulse" />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight">Freakend</h1>
-              <p className="text-xs text-gray-500">IE Edition</p>
+              <h1 className="comic-text text-2xl leading-none gradient-text">FREAKEND</h1>
+              <p className="text-[10px] text-freak-cyan font-bold tracking-widest uppercase">One pull away from a story.</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {liveMeta && liveMeta.liveCount > 0 && (
-              <div className="hidden sm:flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-freak-cyan bg-freak-cyan/10 border border-freak-cyan/30 px-2.5 py-1 rounded-full">
                 <Globe className="w-3 h-3" />
-                {liveMeta.liveCount} live results
+                {liveMeta.liveCount} LIVE
               </div>
             )}
-            <div className="text-sm font-semibold text-ie-red">
-              {profile.points} pts
+            <div className="text-sm font-black text-freak-yellow neon-text-yellow">
+              {profile.points} PTS
             </div>
             {isLoggedIn && (
               <button
                 onClick={handleLogout}
-                className="text-xs text-gray-500 hover:text-ie-red flex items-center gap-1"
+                className="text-xs font-bold text-white/60 hover:text-freak-pink flex items-center gap-1 transition-colors"
               >
-                <LogOut className="w-3 h-3" /> Logout
+                <LogOut className="w-3 h-3" /> EXIT
               </button>
             )}
           </div>
@@ -202,8 +208,8 @@ export default function Home() {
           <div className="lg:col-span-2 space-y-6">
             <FilterPanel filters={filters} onChange={setFilters} />
             {loadingLive && (
-              <div className="text-xs text-gray-500 flex items-center gap-2">
-                <Sparkles className="w-3 h-3 animate-spin" /> Searching live events...
+              <div className="text-xs font-bold text-freak-cyan flex items-center gap-2">
+                <Sparkles className="w-3 h-3 animate-spin" /> SCANNING LIVE EVENTS...
               </div>
             )}
             <Leaderboard profile={profile} />
@@ -221,8 +227,9 @@ export default function Home() {
             />
 
             {filteredExperiences.length === 0 && (
-              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 text-sm text-yellow-800">
-                No experiences match your filters. Try widening your budget, distance, or dare level.
+              <div className="comic-panel border-l-4 border-l-freak-yellow p-4 text-sm text-white/90">
+                <span className="font-black text-freak-yellow uppercase">No matches!</span>{' '}
+                Loosen your filters to unlock a dare.
               </div>
             )}
 

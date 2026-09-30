@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { UserProfile } from '@/lib/types';
-import { Sparkles, Mail, User, Users } from 'lucide-react';
+import { Sparkles, Mail, User, Users, Crown, Zap } from 'lucide-react';
 
 interface Props {
   onLogin: (profile: UserProfile) => void;
@@ -42,73 +42,82 @@ export default function AuthModal({ onLogin }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ie-dark/80 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-freak-bg/95 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="comic-card w-full max-w-md p-6 sm:p-8 animate-pop relative">
+        <div className="absolute -top-4 -right-4 w-12 h-12 bg-freak-yellow starburst flex items-center justify-center animate-star-spin">
+          <Zap className="w-6 h-6 text-freak-bg" />
+        </div>
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-ie-red/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-8 h-8 text-ie-red" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-freak-pink to-freak-purple flex items-center justify-center shadow-neon-pink">
+            <Crown className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold mb-1">Freakend</h1>
-          <p className="text-gray-600">Surprise Madrid experiences for IE MBA students.</p>
+          <h1 className="comic-text text-4xl mb-1 gradient-text">FREAKEND</h1>
+          <p className="text-freak-cyan font-black uppercase tracking-widest text-xs">One pull away from a story.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+            <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1">Full name</label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-freak-pink" />
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Alex Chen"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-ie-red focus:ring-2 focus:ring-ie-red/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-pink focus:ring-2 focus:ring-freak-pink/30 outline-none transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">IE email</label>
+            <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1">IE email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-freak-cyan" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="alex.chen@student.ie.edu"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-ie-red focus:ring-2 focus:ring-ie-red/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-cyan focus:ring-2 focus:ring-freak-cyan/30 outline-none transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cohort</label>
+            <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1">Cohort</label>
             <div className="relative">
-              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-freak-purple" />
               <input
                 type="text"
                 value={cohort}
                 onChange={(e) => setCohort(e.target.value)}
                 placeholder="e.g. MBA 2026"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-ie-red focus:ring-2 focus:ring-ie-red/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-purple focus:ring-2 focus:ring-freak-purple/30 outline-none transition-all"
               />
             </div>
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-sm font-bold text-freak-yellow bg-freak-yellow/10 border border-freak-yellow/30 rounded-lg px-3 py-2">
+              {error}
+            </p>
           )}
 
           <button
             type="submit"
-            className="w-full bg-ie-red hover:bg-red-800 text-white font-semibold py-3 rounded-xl transition-colors"
+            className="group relative w-full py-3 rounded-xl font-black uppercase tracking-wider text-white transition-all"
           >
-            Start exploring
+            <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-freak-pink via-freak-purple to-freak-cyan" />
+            <span className="absolute inset-[2px] rounded-xl bg-freak-panel transition-all group-hover:inset-[1px]" />
+            <span className="relative flex items-center justify-center gap-2">
+              Start exploring <Sparkles className="w-4 h-4 text-freak-yellow" />
+            </span>
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 text-center mt-4">
-          This is a demo login. In production it would connect to IE SSO.
+        <p className="text-[10px] text-white/30 text-center mt-4 uppercase tracking-wider">
+          Demo login. Production would connect to IE SSO.
         </p>
       </div>
     </div>

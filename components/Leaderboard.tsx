@@ -1,7 +1,7 @@
 'use client';
 
 import { UserProfile, LeaderboardUser } from '@/lib/types';
-import { Trophy, Medal, Crown } from 'lucide-react';
+import { Trophy, Medal, Crown, Zap } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -32,9 +32,9 @@ export default function Leaderboard({ profile }: Props) {
   const allUsers = [...sameCohort, currentUser].sort((a, b) => b.points - a.points);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-ie-red" />
+    <div className="comic-panel p-5">
+      <h3 className="comic-text text-xl mb-4 flex items-center gap-2 gradient-text">
+        <Trophy className="w-5 h-5 text-freak-yellow" />
         {profile.cohort} Leaderboard
       </h3>
 
@@ -42,27 +42,34 @@ export default function Leaderboard({ profile }: Props) {
         {allUsers.map((user, index) => (
           <div
             key={`${user.name}-${index}`}
-            className={`flex items-center gap-3 p-3 rounded-xl ${
-              user.isCurrentUser ? 'bg-ie-red/10 border border-ie-red/20' : 'bg-gray-50'
+            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+              user.isCurrentUser
+                ? 'bg-freak-pink/10 border-freak-pink shadow-neon-pink'
+                : 'bg-white/5 border-white/10'
             }`}
           >
-            <div className="w-8 text-center font-bold text-gray-400">
-              {index === 0 ? <Crown className="w-5 h-5 text-yellow-500 mx-auto" /> :
-               index === 1 ? <Medal className="w-5 h-5 text-gray-400 mx-auto" /> :
-               index === 2 ? <Medal className="w-5 h-5 text-amber-600 mx-auto" /> :
-               index + 1}
+            <div className="w-8 text-center">
+              {index === 0 ? (
+                <Crown className="w-5 h-5 text-freak-yellow mx-auto" />
+              ) : index === 1 ? (
+                <Medal className="w-5 h-5 text-freak-cyan mx-auto" />
+              ) : index === 2 ? (
+                <Medal className="w-5 h-5 text-freak-purple mx-auto" />
+              ) : (
+                <span className="font-black text-white/40 text-sm">{index + 1}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm truncate">
-                {user.name} {user.isCurrentUser && <span className="text-ie-red">(You)</span>}
+              <div className="font-black text-sm text-white truncate uppercase tracking-wide">
+                {user.name} {user.isCurrentUser && <span className="text-freak-pink">(YOU)</span>}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-[10px] text-white/50 font-bold uppercase">
                 Level {user.level} · {user.dares} dares
               </div>
             </div>
             <div className="text-right">
-              <div className="font-bold text-sm">{user.points}</div>
-              <div className="text-xs text-gray-400">pts</div>
+              <div className="font-black text-sm text-freak-yellow">{user.points}</div>
+              <div className="text-[10px] text-white/40 font-black uppercase">pts</div>
             </div>
           </div>
         ))}
