@@ -19,6 +19,9 @@ interface Props {
   onAccept: () => void;
   onSkip: () => void;
   onLogExperience?: (experience: Experience) => void;
+  isSaved?: boolean;
+  onToggleSave?: (experience: Experience) => void;
+  onWantToGo?: (experience: Experience) => void;
 }
 
 export default function ExploreView({
@@ -35,7 +38,12 @@ export default function ExploreView({
   onAccept,
   onSkip,
   onLogExperience,
+  isSaved,
+  onToggleSave,
+  onWantToGo,
 }: Props) {
+  const surpriseSaved = surprise ? isSaved : false;
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -75,10 +83,13 @@ export default function ExploreView({
             experience={surprise}
             isGenerating={isGenerating}
             hasMatches={hasMatches}
+            isSaved={surpriseSaved}
             onGenerate={onGenerate}
             onAccept={onAccept}
             onSkip={onSkip}
             onLogExperience={onLogExperience}
+            onToggleSave={onToggleSave}
+            onWantToGo={onWantToGo}
           />
 
           {hasMatches === false && (

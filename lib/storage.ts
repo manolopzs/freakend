@@ -16,8 +16,23 @@ export function getDefaultProfile(): UserProfile {
     completed: [],
     badges: [],
     friends: loadFriends(),
+    saved: [],
+    plans: [],
     avatarEmoji: '🙂',
   };
+}
+
+export function saveExperience(profile: UserProfile, experienceId: string): UserProfile {
+  if (profile.saved.includes(experienceId)) return profile;
+  return { ...profile, saved: [...profile.saved, experienceId] };
+}
+
+export function unsaveExperience(profile: UserProfile, experienceId: string): UserProfile {
+  return { ...profile, saved: profile.saved.filter((id) => id !== experienceId) };
+}
+
+export function isExperienceSaved(profile: UserProfile, experienceId: string): boolean {
+  return profile.saved.includes(experienceId);
 }
 
 export function loadProfile(): UserProfile {

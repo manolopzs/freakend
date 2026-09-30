@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { UserProfile, Experience, FriendProfile } from '@/lib/types';
+import { UserProfile, Experience, FriendProfile, Plan } from '@/lib/types';
 import ProfileHeader from '@/components/ProfileHeader';
 import BadgeGrid from '@/components/BadgeGrid';
 import Leaderboard from '@/components/Leaderboard';
-import { UserPlus, X, Star, Calendar, MapPin } from 'lucide-react';
+import ExperienceCard from '@/components/ExperienceCard';
+import PlansView from '@/components/PlansView';
+import { UserPlus, X, Star, Calendar, MapPin, Bookmark, CalendarDays, List } from 'lucide-react';
+
+type ProfileTab = 'activity' | 'saved' | 'plans';
 
 interface Props {
   profile: UserProfile;
@@ -13,12 +17,28 @@ interface Props {
   friendProfiles: FriendProfile[];
   onAddFriend: (email: string) => void;
   onRemoveFriend: (email: string) => void;
+  onToggleSave?: (experience: Experience) => void;
+  onWantToGo?: (experience: Experience) => void;
+  onLogExperience?: (experience: Experience) => void;
+  onLeavePlan?: (plan: Plan) => void;
 }
 
-export default function ProfileView({ profile, experiences, friendProfiles, onAddFriend, onRemoveFriend }: Props) {
+export default function ProfileView({
+  profile,
+  experiences,
+  friendProfiles,
+  onAddFriend,
+  onRemoveFriend,
+  onToggleSave,
+  onWantToGo,
+  onLogExperience,
+  onLeavePlan,
+}: Props) {
   const [newEmail, setNewEmail] = useState('');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('activity');
   const expMap = new Map(experiences.map((e) => [e.id, e]));
   const ordered = [...profile.completed].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  const savedExperiences = profile.saved.map((id) => expMap.get(id)).filter(Boolean) as Experience[];
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +48,12 @@ export default function ProfileView({ profile, experiences, friendProfiles, onAd
     onAddFriend(email);
     setNewEmail('');
   };
+
+  const tabs: { id: ProfileTab; label: string; icon: typeof List }[] = [
+    { id: 'activity', label: 'Activity', icon: List },
+    { id: 'saved', label: 'Saved', icon: Bookmark },
+    { id: 'plans', label: 'Plans', icon: CalendarDays },
+  ];
 
   return (
     <div className="space-y-6">
@@ -85,50 +111,122 @@ export default function ProfileView({ profile, experiences, friendProfiles, onAd
       <BadgeGrid profile={profile} />
 
       <div className="comic-panel p-5">
-        <h3 className="comic-text text-xl mb-4 gradient-text-yellow">Your logged experiences</h3>
-        {ordered.length === 0 ? (
-          <p className="text-sm text-white/50">Nothing logged yet. Go explore and post your first Freakend.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {ordered.map((c, index) => {
-              const exp = expMap.get(c.id);
-              if (!exp) return null;
-              const imageUrl = c.photoUrl || exp.photoUrl || null;
-              return (
-                <div key={`${c.id}-${c.completedAt}-${index}`} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-freak-cyan/40 transition-colors">
-                  {imageUrl ? (
-                    <div className="h-32 bg-black">
-                      <img src={imageUrl} alt={exp.title} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="h-32 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
-                      <div className="text-4xl">{exp.emoji}</div>
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <div className="font-black text-sm text-white truncate uppercase tracking-wide">{exp.title}</div>
-                    <div className="flex items-center gap-2 text-[10px] text-white/50 mt-1">
-                      <MapPin className="w-3 h-3 text-freak-cyan" /> {exp.neighborhood}
-                      <Calendar className="w-3 h-3 ml-1" /> {new Date(c.completedAt).toLocaleDateString()}
-                    </div>
-                    {c.rating > 0 && (
-                      <div className="flex items-center gap-0.5 mt-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-3 h-3 ${
-                              star <= c.rating ? 'text-freak-yellow fill-freak-yellow' : 'text-white/20'
-                            }`}
-                          />
-                        ))}
+        <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-3">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                  active
+                    ? 'bg-freak-pink/20 border-freak-pink text-white shadow-neon-pink'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+                {tab.id === 'saved' && profile.saved.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-freak-yellow text-freak-bg text-[9px]">
+                    {profile.saved.length}
+                  </span>
+                )}
+                {tab.id === 'plans' && profile.plans.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-freak-cyan text-freak-bg text-[9px]">
+                    {profile.plans.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === 'activity' && (
+          <>
+            <h3 className="comic-text text-xl mb-4 gradient-text-yellow flex items-center gap-2">
+              <Calendar className="w-4 h-4" /> Your logged experiences
+            </h3>
+            {ordered.length === 0 ? (
+              <p className="text-sm text-white/50">Nothing logged yet. Go explore and post your first Freakend.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {ordered.map((c, index) => {
+                  const exp = expMap.get(c.id);
+                  if (!exp) return null;
+                  const imageUrl = c.photoUrl || exp.photoUrl || null;
+                  return (
+                    <div key={`${c.id}-${c.completedAt}-${index}`} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-freak-cyan/40 transition-colors">
+                      {imageUrl ? (
+                        <div className="h-32 bg-black">
+                          <img src={imageUrl} alt={exp.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="h-32 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
+                          <div className="text-4xl">{exp.emoji}</div>
+                        </div>
+                      )}
+                      <div className="p-3">
+                        <div className="font-black text-sm text-white truncate uppercase tracking-wide">{exp.title}</div>
+                        <div className="flex items-center gap-2 text-[10px] text-white/50 mt-1">
+                          <MapPin className="w-3 h-3 text-freak-cyan" /> {exp.neighborhood}
+                          <Calendar className="w-3 h-3 ml-1" /> {new Date(c.completedAt).toLocaleDateString()}
+                        </div>
+                        {c.rating > 0 && (
+                          <div className="flex items-center gap-0.5 mt-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3 h-3 ${
+                                  star <= c.rating ? 'text-freak-yellow fill-freak-yellow' : 'text-white/20'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {c.caption && <p className="text-xs text-white/70 mt-2 line-clamp-2">“{c.caption}”</p>}
                       </div>
-                    )}
-                    {c.caption && <p className="text-xs text-white/70 mt-2 line-clamp-2">“{c.caption}”</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'saved' && (
+          <>
+            <h3 className="comic-text text-xl mb-4 gradient-text flex items-center gap-2">
+              <Bookmark className="w-4 h-4" /> Saved wishlist
+            </h3>
+            {savedExperiences.length === 0 ? (
+              <p className="text-sm text-white/50">No saved experiences yet. Bookmark ones you want to try later.</p>
+            ) : (
+              <div className="flex flex-wrap gap-4">
+                {savedExperiences.map((exp) => (
+                  <ExperienceCard
+                    key={exp.id}
+                    experience={exp}
+                    isSaved
+                    onToggleSave={onToggleSave}
+                    onWantToGo={onWantToGo}
+                    onLogExperience={onLogExperience}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'plans' && (
+          <PlansView
+            profile={profile}
+            experiences={experiences}
+            friendProfiles={friendProfiles}
+            onWantToGo={onWantToGo}
+            onLogExperience={onLogExperience}
+            onLeavePlan={onLeavePlan}
+          />
         )}
       </div>
     </div>

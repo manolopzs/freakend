@@ -33,6 +33,14 @@ export interface Filters {
   dateWindow: 'day' | 'weekend' | 'month' | 'any';
 }
 
+export interface Comment {
+  id: string;
+  authorEmail: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface CompletedExperience {
   id: string;
   completedAt: string;
@@ -44,6 +52,20 @@ export interface CompletedExperience {
   caption?: string;
   photoUrl?: string;
   sharedWith?: string[];
+  vibeRating?: number;
+  valueRating?: number;
+  uniquenessRating?: number;
+  tags?: string[];
+  notes?: string;
+  comments?: Comment[];
+  reactions?: Record<string, string[]>;
+}
+
+export interface Plan {
+  id: string;
+  experienceId: string;
+  createdAt: string;
+  attendees: string[];
 }
 
 export interface UserProfile {
@@ -57,6 +79,8 @@ export interface UserProfile {
   completed: CompletedExperience[];
   badges: string[];
   friends: string[];
+  saved: string[];
+  plans: Plan[];
   avatarEmoji?: string;
 }
 

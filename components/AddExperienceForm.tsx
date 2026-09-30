@@ -2,20 +2,50 @@
 
 import { useEffect, useState } from 'react';
 import { Experience, FriendProfile } from '@/lib/types';
-import { Star, Camera, Send, Users } from 'lucide-react';
+import { Star, Camera, Send, Users, Tag, FileText } from 'lucide-react';
 
 interface Props {
   experiences: Experience[];
   prefilledExperienceId?: string | null;
   friends: FriendProfile[];
-  onLog: (experienceId: string, rating: number, caption: string, photoUrl: string | undefined, sharedWith: string[]) => void;
+  onLog: (
+    experienceId: string,
+    rating: number,
+    caption: string,
+    photoUrl: string | undefined,
+    sharedWith: string[],
+    details: {
+      vibeRating: number;
+      valueRating: number;
+      uniquenessRating: number;
+      tags: string[];
+      notes: string;
+    }
+  ) => void;
 }
+
+const PRESET_TAGS = [
+  { value: 'hidden-gem', label: 'Hidden gem' },
+  { value: 'great-for-dates', label: 'Great for dates' },
+  { value: 'overrated', label: 'Overrated' },
+  { value: 'ie-favorite', label: 'IE favorite' },
+  { value: 'worth-the-hype', label: 'Worth the hype' },
+  { value: 'skip-it', label: 'Skip it' },
+];
 
 export default function AddExperienceForm({ experiences, prefilledExperienceId, friends, onLog }: Props) {
   const [experienceId, setExperienceId] = useState(prefilledExperienceId || '');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [vibeRating, setVibeRating] = useState(0);
+  const [hoverVibe, setHoverVibe] = useState(0);
+  const [valueRating, setValueRating] = useState(0);
+  const [hoverValue, setHoverValue] = useState(0);
+  const [uniquenessRating, setUniquenessRating] = useState(0);
+  const [hoverUniqueness, setHoverUniqueness] = useState(0);
   const [caption, setCaption] = useState('');
+  const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
   const [sharedWith, setSharedWith] = useState<string[]>(friends.map((f) => f.email));
   const [isUploading, setIsUploading] = useState(false);
@@ -42,16 +72,65 @@ export default function AddExperienceForm({ experiences, prefilledExperienceId, 
     setSharedWith((prev) => (prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!experienceId || rating < 1) return;
-    onLog(experienceId, rating, caption.trim(), photoUrl, sharedWith);
+  const toggleTag = (value: string) => {
+    setTags((prev) => (prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]));
+  };
+
+  const resetForm = () => {
     setExperienceId('');
     setRating(0);
+    setVibeRating(0);
+    setValueRating(0);
+    setUniquenessRating(0);
     setCaption('');
+    setNotes('');
+    setTags([]);
     setPhotoUrl(undefined);
     setSharedWith(friends.map((f) => f.email));
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!experienceId || rating < 1) return;
+    onLog(experienceId, rating, caption.trim(), photoUrl, sharedWith, {
+      vibeRating,
+      valueRating,
+      uniquenessRating,
+      tags,
+      notes: notes.trim(),
+    });
+    resetForm();
+  };
+
+  const renderStarRow = (
+    label: string,
+    value: number,
+    hover: number,
+    setHover: (n: number) => void,
+    setValue: (n: number) => void
+  ) => (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-xs font-black text-white/80 uppercase tracking-wider min-w-[5.5rem]">{label}</span>
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onMouseEnter={() => setHover(star)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => setValue(star)}
+            className="p-1 transition-transform hover:scale-110"
+          >
+            <Star
+              className={`w-6 h-6 ${
+                star <= (hover || value) ? 'text-freak-yellow fill-freak-yellow' : 'text-white/20'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <form onSubmit={handleSubmit} className="comic-panel p-5 space-y-6">
@@ -86,25 +165,37 @@ export default function AddExperienceForm({ experiences, prefilledExperienceId, 
         </div>
       )}
 
+      <div className="space-y-3">
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider block">Ratings</label>
+        {renderStarRow('Overall', rating, hoverRating, setHoverRating, setRating)}
+        {renderStarRow('Vibe', vibeRating, hoverVibe, setHoverVibe, setVibeRating)}
+        {renderStarRow('Value', valueRating, hoverValue, setHoverValue, setValueRating)}
+        {renderStarRow('Unique', uniquenessRating, hoverUniqueness, setHoverUniqueness, setUniquenessRating)}
+      </div>
+
       <div>
-        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 block">Rating</label>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              onMouseEnter={() => setHoverRating(star)}
-              onMouseLeave={() => setHoverRating(0)}
-              onClick={() => setRating(star)}
-              className="p-1 transition-transform hover:scale-110"
-            >
-              <Star
-                className={`w-8 h-8 ${
-                  star <= (hoverRating || rating) ? 'text-freak-yellow fill-freak-yellow' : 'text-white/20'
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 flex items-center gap-2">
+          <Tag className="w-4 h-4 text-freak-cyan" />
+          Tags
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {PRESET_TAGS.map((tag) => {
+            const selected = tags.includes(tag.value);
+            return (
+              <button
+                key={tag.value}
+                type="button"
+                onClick={() => toggleTag(tag.value)}
+                className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                  selected
+                    ? 'bg-freak-pink text-white border-freak-pink shadow-neon-pink'
+                    : 'bg-white/5 text-white/70 border-white/10 hover:border-white/30'
                 }`}
-              />
-            </button>
-          ))}
+              >
+                {tag.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -114,8 +205,22 @@ export default function AddExperienceForm({ experiences, prefilledExperienceId, 
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           placeholder="What made it memorable?"
-          rows={3}
+          rows={2}
           className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-cyan focus:ring-2 focus:ring-freak-cyan/30 outline-none resize-none"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-freak-purple" />
+          Review notes
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Write a longer review to help friends decide…"
+          rows={3}
+          className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-purple focus:ring-2 focus:ring-freak-purple/30 outline-none resize-none"
         />
       </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Experience, Filters, UserProfile } from '@/lib/types';
+import { Experience, Filters, UserProfile, CompletedExperience, Comment, Plan } from '@/lib/types';
 
 interface Weather {
   temp: number;
@@ -10,7 +10,16 @@ interface Weather {
   location: string;
 }
 import { curatedExperiences } from '@/data/experiences';
-import { loadFilters, loadProfile, saveFilters, saveProfile, loadAllProfiles, getDefaultProfile } from '@/lib/storage';
+import {
+  loadFilters,
+  loadProfile,
+  saveFilters,
+  saveProfile,
+  loadAllProfiles,
+  getDefaultProfile,
+  saveExperience,
+  unsaveExperience,
+} from '@/lib/storage';
 import { calculatePoints, updateStreak, computeLevel, checkNewBadges, BADGES } from '@/lib/gamification';
 import BottomNav, { Tab } from '@/components/BottomNav';
 import FeedView from '@/components/FeedView';
@@ -19,6 +28,8 @@ import AddExperienceForm from '@/components/AddExperienceForm';
 import ProfileView from '@/components/ProfileView';
 import NewBadgeToast from '@/components/NewBadgeToast';
 import AuthModal from '@/components/AuthModal';
+import SmartCarousels from '@/components/SmartCarousels';
+import MapView from '@/components/MapView';
 import { Sparkles, LogOut, Crown } from 'lucide-react';
 
 export default function Home() {
@@ -98,7 +109,10 @@ export default function Home() {
   }, [filters, experiences]);
 
   const allProfiles = useMemo(() => (profile ? loadAllProfiles(profile) : []), [profile]);
-  const friendProfiles = useMemo(() => allProfiles.filter((p) => p.email !== (profile?.email || 'me')), [allProfiles, profile]);
+  const friendProfiles = useMemo(
+    () => allProfiles.filter((p) => p.email !== (profile?.email || 'me')),
+    [allProfiles, profile]
+  );
 
   const generateSurprise = () => {
     if (!filters || filteredExperiences.length === 0) return;
@@ -114,7 +128,13 @@ export default function Home() {
 
   const acceptDare = () => {
     if (!surprise || !profile) return;
-    logExperienceInternal(surprise.id, 0, '', undefined, []);
+    logExperienceInternal(surprise.id, 0, '', undefined, [], {
+      vibeRating: 0,
+      valueRating: 0,
+      uniquenessRating: 0,
+      tags: [],
+      notes: '',
+    });
     setSurprise(null);
   };
 
@@ -123,7 +143,14 @@ export default function Home() {
     rating: number,
     caption: string,
     photoUrl: string | undefined,
-    sharedWith: string[]
+    sharedWith: string[],
+    details: {
+      vibeRating: number;
+      valueRating: number;
+      uniquenessRating: number;
+      tags: string[];
+      notes: string;
+    }
   ) => {
     if (!profile) return;
     const experience = experiences.find((e) => e.id === experienceId);
@@ -146,6 +173,13 @@ export default function Home() {
         caption,
         photoUrl,
         sharedWith,
+        vibeRating: details.vibeRating || undefined,
+        valueRating: details.valueRating || undefined,
+        uniquenessRating: details.uniquenessRating || undefined,
+        tags: details.tags.length > 0 ? details.tags : undefined,
+        notes: details.notes || undefined,
+        comments: [],
+        reactions: {},
       },
     ];
 
@@ -173,9 +207,16 @@ export default function Home() {
     rating: number,
     caption: string,
     photoUrl: string | undefined,
-    sharedWith: string[]
+    sharedWith: string[],
+    details: {
+      vibeRating: number;
+      valueRating: number;
+      uniquenessRating: number;
+      tags: string[];
+      notes: string;
+    }
   ) => {
-    logExperienceInternal(experienceId, rating, caption, photoUrl, sharedWith);
+    logExperienceInternal(experienceId, rating, caption, photoUrl, sharedWith, details);
     setPrefilledExperienceId(null);
     setActiveTab('feed');
   };
@@ -218,6 +259,96 @@ export default function Home() {
     if (!profile) return;
     const next = { ...profile, friends: profile.friends.filter((e) => e !== email) };
     setProfile(next);
+  };
+
+  const handleToggleSave = (experience: Experience) => {
+    if (!profile) return;
+    const next = profile.saved.includes(experience.id)
+      ? unsaveExperience(profile, experience.id)
+      : saveExperience(profile, experience.id);
+    setProfile(next);
+  };
+
+  const handleWantToGo = (experience: Experience) => {
+    if (!profile) return;
+    const exists = profile.plans.find((p) => p.experienceId === experience.id);
+    if (exists) {
+      setActiveTab('profile');
+      return;
+    }
+    const plan: Plan = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      experienceId: experience.id,
+      createdAt: new Date().toISOString(),
+      attendees: [profile.email],
+    };
+    setProfile({ ...profile, plans: [...profile.plans, plan] });
+    setActiveTab('profile');
+  };
+
+  const handleLeavePlan = (plan: Plan) => {
+    if (!profile) return;
+    setProfile({
+      ...profile,
+      plans: profile.plans.filter((p) => p.id !== plan.id),
+    });
+  };
+
+  const findCompletedIndex = (target: CompletedExperience) => {
+    if (!profile) return -1;
+    return profile.completed.findIndex(
+      (c) => c.id === target.id && c.completedAt === target.completedAt
+    );
+  };
+
+  const handleToggleReaction = (target: CompletedExperience, emoji: string) => {
+    if (!profile || !profile.email) return;
+    const idx = findCompletedIndex(target);
+    if (idx === -1) return;
+
+    const current = profile.completed[idx];
+    const reactions = { ...(current.reactions || {}) };
+    const users = new Set(reactions[emoji] || []);
+
+    if (users.has(profile.email)) {
+      users.delete(profile.email);
+    } else {
+      users.add(profile.email);
+    }
+
+    if (users.size === 0) {
+      delete reactions[emoji];
+    } else {
+      reactions[emoji] = Array.from(users);
+    }
+
+    const updated: CompletedExperience = { ...current, reactions };
+    const nextCompleted = [...profile.completed];
+    nextCompleted[idx] = updated;
+    setProfile({ ...profile, completed: nextCompleted });
+  };
+
+  const handleAddComment = (target: CompletedExperience, text: string) => {
+    if (!profile || !profile.email) return;
+    const idx = findCompletedIndex(target);
+    if (idx === -1) return;
+
+    const current = profile.completed[idx];
+    const comment: Comment = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      authorEmail: profile.email,
+      authorName: profile.name || 'You',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated: CompletedExperience = {
+      ...current,
+      comments: [...(current.comments || []), comment],
+    };
+    const nextCompleted = [...profile.completed];
+    nextCompleted[idx] = updated;
+    setProfile({ ...profile, completed: nextCompleted });
   };
 
   if (!mounted || !profile || !filters) {
@@ -272,7 +403,25 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {activeTab === 'feed' && (
-          <FeedView profiles={allProfiles} experiences={experiences} currentUserEmail={profile.email} />
+          <>
+            <SmartCarousels
+              experiences={experiences}
+              profiles={allProfiles}
+              currentProfile={profile}
+              onToggleSave={handleToggleSave}
+              onWantToGo={handleWantToGo}
+              onLogExperience={handleLogFromSurprise}
+            />
+            <FeedView
+              profiles={allProfiles}
+              experiences={experiences}
+              currentUserEmail={profile.email}
+              currentUserName={profile.name}
+              currentUserAvatar={profile.avatarEmoji}
+              onToggleReaction={handleToggleReaction}
+              onAddComment={handleAddComment}
+            />
+          </>
         )}
 
         {activeTab === 'explore' && (
@@ -290,6 +439,18 @@ export default function Home() {
             onAccept={acceptDare}
             onSkip={skipDare}
             onLogExperience={handleLogFromSurprise}
+            isSaved={!!(surprise && profile.saved.includes(surprise.id))}
+            onToggleSave={handleToggleSave}
+            onWantToGo={handleWantToGo}
+          />
+        )}
+
+        {activeTab === 'map' && (
+          <MapView
+            experiences={experiences}
+            currentProfile={profile}
+            onToggleSave={handleToggleSave}
+            onWantToGo={handleWantToGo}
           />
         )}
 
@@ -309,6 +470,10 @@ export default function Home() {
             friendProfiles={friendProfiles}
             onAddFriend={handleAddFriend}
             onRemoveFriend={handleRemoveFriend}
+            onToggleSave={handleToggleSave}
+            onWantToGo={handleWantToGo}
+            onLogExperience={handleLogFromSurprise}
+            onLeavePlan={handleLeavePlan}
           />
         )}
       </div>

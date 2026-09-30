@@ -1,8 +1,8 @@
 'use client';
 
-import { Home, Compass, PlusCircle, User } from 'lucide-react';
+import { Home, Compass, PlusCircle, User, Map } from 'lucide-react';
 
-export type Tab = 'feed' | 'explore' | 'add' | 'profile';
+export type Tab = 'feed' | 'explore' | 'add' | 'profile' | 'map';
 
 interface Props {
   active: Tab;
@@ -12,6 +12,7 @@ interface Props {
 const TABS: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'feed', label: 'Feed', icon: Home },
   { id: 'explore', label: 'Explore', icon: Compass },
+  { id: 'map', label: 'Map', icon: Map },
   { id: 'add', label: 'Add', icon: PlusCircle },
   { id: 'profile', label: 'Profile', icon: User },
 ];

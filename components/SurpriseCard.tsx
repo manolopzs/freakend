@@ -3,19 +3,33 @@
 import { useEffect, useState } from 'react';
 import { Experience } from '@/lib/types';
 import { budgetLabels, dareLabels } from '@/data/experiences';
-import { MapPin, Wallet, Zap, Users, RefreshCw, Check, X, Share2, ExternalLink, PenLine } from 'lucide-react';
+import { MapPin, Wallet, Zap, Users, RefreshCw, Check, X, Share2, ExternalLink, PenLine, Bookmark, CalendarPlus } from 'lucide-react';
 
 interface Props {
   experience: Experience | null;
   isGenerating: boolean;
   hasMatches: boolean;
+  isSaved?: boolean;
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
   onLogExperience?: (experience: Experience) => void;
+  onToggleSave?: (experience: Experience) => void;
+  onWantToGo?: (experience: Experience) => void;
 }
 
-export default function SurpriseCard({ experience, isGenerating, hasMatches, onGenerate, onAccept, onSkip, onLogExperience }: Props) {
+export default function SurpriseCard({
+  experience,
+  isGenerating,
+  hasMatches,
+  isSaved = false,
+  onGenerate,
+  onAccept,
+  onSkip,
+  onLogExperience,
+  onToggleSave,
+  onWantToGo,
+}: Props) {
   const [revealed, setRevealed] = useState(false);
   const [leverPulling, setLeverPulling] = useState(false);
 
@@ -103,6 +117,29 @@ export default function SurpriseCard({ experience, isGenerating, hasMatches, onG
         </div>
         <div className="absolute top-3 right-3 w-10 h-10 bg-freak-yellow starburst flex items-center justify-center animate-star-spin">
           <Zap className="w-5 h-5 text-freak-bg" />
+        </div>
+        <div className="absolute top-3 left-3 flex gap-2">
+          {onToggleSave && (
+            <button
+              onClick={() => experience && onToggleSave(experience)}
+              className={`p-2 rounded-full border transition-all ${
+                isSaved
+                  ? 'bg-freak-yellow border-freak-yellow text-freak-bg shadow-neon-yellow'
+                  : 'bg-freak-panel/70 border-white/20 text-white/70 hover:text-freak-yellow hover:border-freak-yellow'
+              }`}
+              aria-label={isSaved ? 'Remove from saved' : 'Save experience'}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+          )}
+          {onWantToGo && (
+            <button
+              onClick={() => experience && onWantToGo(experience)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-freak-cyan/90 border border-freak-cyan text-freak-bg text-[10px] font-black uppercase tracking-wider shadow-neon-cyan hover:bg-freak-cyan transition-colors"
+            >
+              <CalendarPlus className="w-3 h-3" /> Want to go
+            </button>
+          )}
         </div>
       </div>
 

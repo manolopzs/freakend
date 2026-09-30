@@ -39,6 +39,8 @@ export default function AuthModal({ onLogin }: Props) {
       completed: [],
       badges: [],
       friends: [],
+      saved: [],
+      plans: [],
       avatarEmoji: '🙂',
     });
   };
