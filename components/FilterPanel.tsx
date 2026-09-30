@@ -11,7 +11,8 @@ interface Props {
 
 const ALL_TYPES: ExperienceType[] = ['food', 'nightlife', 'culture', 'adventure', 'wellness', 'sports', 'concerts'];
 
-const COMIC_TYPE_LABELS: Record<ExperienceType, string> = {
+const COMIC_TYPE_LABELS: Record<ExperienceType | 'all', string> = {
+  all: 'ALL',
   food: 'RESTAURANTS',
   nightlife: 'NIGHTLIFE',
   culture: 'CULTURE',
@@ -21,7 +22,8 @@ const COMIC_TYPE_LABELS: Record<ExperienceType, string> = {
   concerts: 'CONCERTS',
 };
 
-const COMIC_TYPE_EMOJI: Record<ExperienceType, string> = {
+const COMIC_TYPE_EMOJI: Record<ExperienceType | 'all', string> = {
+  all: '✨',
   food: '🍔',
   nightlife: '🎉',
   culture: '🎭',
@@ -31,7 +33,8 @@ const COMIC_TYPE_EMOJI: Record<ExperienceType, string> = {
   concerts: '🎸',
 };
 
-const COMIC_TYPE_GRADIENT: Record<ExperienceType, string> = {
+const COMIC_TYPE_GRADIENT: Record<ExperienceType | 'all', string> = {
+  all: 'from-freak-pink to-freak-cyan',
   food: 'from-freak-orange to-freak-yellow',
   nightlife: 'from-freak-pink to-freak-purple',
   culture: 'from-freak-cyan to-freak-purple',
@@ -42,11 +45,14 @@ const COMIC_TYPE_GRADIENT: Record<ExperienceType, string> = {
 };
 
 export default function FilterPanel({ filters, onChange }: Props) {
-  const toggleType = (type: ExperienceType) => {
-    const types = filters.types.includes(type)
-      ? filters.types.filter((t) => t !== type)
-      : [...filters.types, type];
-    onChange({ ...filters, types });
+  const allSelected = filters.types.length === ALL_TYPES.length;
+
+  const selectType = (type: ExperienceType | 'all') => {
+    if (type === 'all') {
+      onChange({ ...filters, types: ALL_TYPES });
+    } else {
+      onChange({ ...filters, types: [type] });
+    }
   };
 
   const darePercent = filters.dareLevel === 'any' ? 50 : ((filters.dareLevel as number) / 5) * 100;
@@ -66,12 +72,12 @@ export default function FilterPanel({ filters, onChange }: Props) {
             Pick your vibe
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {ALL_TYPES.map((type) => {
-              const active = filters.types.includes(type);
+            {(['all', ...ALL_TYPES] as const).map((type) => {
+              const active = type === 'all' ? allSelected : filters.types.length === 1 && filters.types[0] === type;
               return (
                 <button
                   key={type}
-                  onClick={() => toggleType(type)}
+                  onClick={() => selectType(type)}
                   className={`category-tile relative rounded-xl p-3 text-left border-2 transition-all ${
                     active
                       ? 'border-freak-pink bg-freak-pink/10 active'

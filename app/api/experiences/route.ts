@@ -242,16 +242,20 @@ export async function GET(request: NextRequest) {
     liveResults.push(...places);
   }
 
-  liveResults.push(...(await fetchEventbrite(dateWindow)));
-  liveResults.push(...(await fetchTicketmaster(dateWindow)));
+  const eventTypes: ExperienceType[] = ['culture', 'nightlife', 'concerts'];
+  if (types.some((t) => eventTypes.includes(t))) {
+    liveResults.push(...(await fetchEventbrite(dateWindow)));
+    liveResults.push(...(await fetchTicketmaster(dateWindow)));
+  }
 
-  const all = [...curatedExperiences, ...liveResults];
+  const filteredCurated = curatedExperiences.filter((exp) => types.includes(exp.type));
+  const all = [...filteredCurated, ...liveResults];
 
   return NextResponse.json({
     experiences: all,
     meta: {
       liveCount: liveResults.length,
-      curatedCount: curatedExperiences.length,
+      curatedCount: filteredCurated.length,
       apis: {
         google: !!GOOGLE_API_KEY,
         eventbrite: !!EVENTBRITE_TOKEN,
