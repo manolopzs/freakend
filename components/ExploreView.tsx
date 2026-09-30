@@ -7,7 +7,6 @@ import {
   ExperienceType,
   Budget,
   DareLevel,
-  WeatherCondition,
 } from "@/lib/types";
 import { typeLabels, budgetLabels, vibeLabels } from "@/data/experiences";
 import {
@@ -25,8 +24,19 @@ import {
   Sun,
   CloudRain,
   Snowflake,
+  Calendar,
 } from "lucide-react";
 import InteractiveBackground from "@/components/InteractiveBackground";
+
+type WeatherCondition = "sunny" | "rain" | "snow" | "storm";
+type TimeFilter = "any" | "today" | "week" | "month";
+
+interface Weather {
+  temp: number;
+  condition: string;
+  icon: string;
+  location: string;
+}
 
 interface Props {
   filters: Filters;
@@ -37,6 +47,7 @@ interface Props {
   hasMatches: boolean;
   liveMeta: { liveCount: number; apis: Record<string, boolean> } | null;
   loadingLive: boolean;
+  weather: Weather | null;
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
@@ -66,86 +77,116 @@ export default function ExploreView({
   onAccept,
   onSkip,
 }: Props) {
-  const [weather, setWeather] = useState<WeatherCondition>("sunny");
-  const currentLevel =
-    typeof filters.dareLevel === "number" ? filters.dareLevel : 2;
+  const [activeWeather, setActiveWeather] = useState<WeatherCondition>("sunny");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("any");
 
-  const toggleType = (type: ExperienceType) => {
+  const currentLevel = (
+    typeof filters.dareLevel === "number" ? filters.dareLevel : 2
+  ) as DareLevel;
+
+  const toggleType = (type: ExperienceType | "all") => {
+    if (type === "all") {
+      onFiltersChange({ ...filters, types: [...ALL_TYPES] });
+      return;
+    }
     const types = filters.types.includes(type)
       ? filters.types.filter((t) => t !== type)
       : [...filters.types, type];
     onFiltersChange({ ...filters, types });
   };
 
-  const getTabRotation = (index: number, level: number) => {
-    if (level <= 4) return "rotate-0";
-    if (level === 5) {
-      const angles = [
-        "rotate-3",
-        "-rotate-3",
-        "rotate-6",
-        "-rotate-4",
-        "rotate-2",
-      ];
-      return angles[index % angles.length];
+  const getLevelEmojis = (level: DareLevel) => {
+    switch (level) {
+      case 1:
+        return {
+          food: "☕",
+          nightlife: "🍸",
+          culture: "🏛️",
+          adventure: "🚶",
+          wellness: "🌿",
+        };
+      case 2:
+        return {
+          food: "🍷",
+          nightlife: "🍻",
+          culture: "🎟️",
+          adventure: "🚲",
+          wellness: "🧘",
+        };
+      case 3:
+        return {
+          food: "🔥",
+          nightlife: "⚡",
+          culture: "🎭",
+          adventure: "🧗",
+          wellness: "🔮",
+        };
+      case 4:
+        return {
+          food: "🧪",
+          nightlife: "🚀",
+          culture: "🌌",
+          adventure: "🛸",
+          wellness: "🧬",
+        };
+      case 5:
+        return {
+          food: "🍄",
+          nightlife: "👁️‍🗨️",
+          culture: "🌀",
+          adventure: "⚡",
+          wellness: "🔮",
+        };
+      default:
+        return {
+          food: "🍽️",
+          nightlife: "🍻",
+          culture: "🎨",
+          adventure: "🏔️",
+          wellness: "🧘",
+        };
     }
-    return "rotate-0";
   };
 
-  const cardStyleByLevel: Record<number, string> = {
-    1: "bg-white border-2 border-gray-300 rounded-none shadow-sm text-gray-800 font-boring rotate-0",
+  const emojis = getLevelEmojis(currentLevel);
+
+  const cardStyleByLevel: Record<DareLevel, string> = {
+    1: "bg-white border-2 border-gray-300 rounded-none shadow-sm text-gray-800 font-boring",
     2: "bg-white/90 backdrop-blur-md border-2 border-slate-200 shadow-md rounded-2xl text-slate-900 font-sans",
     3: "bg-slate-900/90 backdrop-blur-xl border-2 border-pink-500 rounded-2xl text-pink-200 font-sans shadow-neon-pink",
-    4: "bg-black/90 backdrop-blur-md border-2 border-emerald-500 rounded-none text-emerald-400 font-mono rotate-0 shadow-[0_0_25px_rgba(16,185,129,0.4)]",
-    5: "bg-black/95 backdrop-blur-md border-4 border-dashed border-fuchsia-500 rounded-[45px_10px_50px_15px] text-fuchsia-300 font-mono italic uppercase tracking-widest shadow-[0_0_50px_rgba(217,70,239,0.9)] animate-chaotic-shake overflow-visible p-6",
+    4: "bg-black/90 backdrop-blur-md border-2 border-emerald-500 rounded-none text-emerald-400 font-mono shadow-[0_0_25px_rgba(16,185,129,0.4)]",
+    5: "bg-black/95 backdrop-blur-md border-4 border-dashed border-fuchsia-500 rounded-[35px_15px_40px_20px] text-fuchsia-300 font-mono shadow-[0_0_60px_rgba(217,70,239,1)] animate-chaotic-shake p-6 rotate-1",
   };
 
-  const getWeatherBadgeStyle = (level: number) => {
+  const getActiveTabStyle = (level: DareLevel) => {
     switch (level) {
       case 1:
-        return "bg-gray-200 border border-gray-400 text-gray-900 rounded-none";
+        return "bg-gray-800 text-white rounded-none border border-gray-900 font-boring text-sm";
       case 2:
-        return "bg-blue-900 border border-ie-cyan text-white rounded-md";
+        return "bg-[#002147] text-white rounded-lg shadow-sm font-sans text-sm";
       case 3:
-        return "bg-pink-950 border border-pink-500 text-pink-200 rounded-md";
+        return "bg-pink-500 text-black font-bold rounded-lg shadow-md shadow-pink-500/50 font-sans text-sm";
       case 4:
-        return "bg-stone-900 border border-emerald-500 text-emerald-400 rounded-none";
+        return "bg-emerald-500 text-black font-bold rounded-none shadow-[0_0_15px_rgba(16,185,129,0.8)] font-mono text-sm";
       case 5:
-        return "bg-yellow-400 border border-black text-black font-bold rounded-none";
+        return "bg-fuchsia-600 text-yellow-300 font-bold rounded-none border-4 border-cyan-400 shadow-[0_0_40px_rgba(6,182,212,1)] font-mono animate-psycho-text animate-chaotic-shake text-sm";
       default:
-        return "bg-white text-black";
+        return "bg-[#002147] text-white rounded-lg text-sm";
     }
   };
 
-  const getActiveTabStyle = (level: number) => {
+  const getSliderAccent = (level: DareLevel) => {
     switch (level) {
       case 1:
-        return "bg-gray-800 text-white rounded-none border border-gray-900 font-boring";
+        return "accent-gray-800 bg-gray-200";
       case 2:
-        return "bg-[#002147] text-white rounded-lg shadow-sm font-sans";
+        return "accent-[#002147] bg-slate-200 border-2 border-slate-400";
       case 3:
-        return "bg-pink-500 text-black font-black rounded-lg shadow-md shadow-pink-500/50 font-sans";
+        return "accent-pink-500 bg-pink-950 border border-pink-500/40";
       case 4:
-        return "bg-emerald-500 text-black font-bold uppercase rounded-none shadow-[0_0_15px_rgba(16,185,129,0.8)] font-mono";
+        return "accent-emerald-500 bg-stone-800 border border-emerald-500/40";
       case 5:
-        return "bg-yellow-400 text-black font-black uppercase rounded-none border-4 border-fuchsia-600 shadow-[0_0_25px_rgba(250,204,21,1)] scale-110 tracking-widest font-mono animate-psycho-text";
-      default:
-        return "bg-[#002147] text-white rounded-lg";
-    }
-  };
-
-  const getSliderAccent = (level: number) => {
-    switch (level) {
-      case 1:
-        return "accent-gray-800";
-      case 2:
-        return "accent-[#002147]";
-      case 3:
-        return "accent-pink-500";
-      case 4:
-        return "accent-emerald-500";
-      case 5:
-        return "accent-yellow-400";
+        return "accent-yellow-400 bg-fuchsia-950 border-2 border-cyan-400 animate-chaotic-shake";
       default:
         return "accent-[#002147]";
     }
@@ -154,25 +195,7 @@ export default function ExploreView({
   const activeTabClass = getActiveTabStyle(currentLevel);
   const sliderAccent = getSliderAccent(currentLevel);
 
-  const surpriseCardStyle: Record<number, string> = {
-    1: "bg-white border-2 border-gray-300 rounded-none shadow-sm text-gray-800 font-boring",
-    2: "bg-white/90 backdrop-blur-md border-2 border-slate-200 shadow-md rounded-2xl text-slate-900 font-sans",
-    3: "bg-slate-900/90 backdrop-blur-xl border-2 border-pink-500 rounded-2xl text-pink-200 font-sans shadow-neon-pink",
-    4: "bg-black/90 backdrop-blur-md border-2 border-emerald-500 rounded-none text-emerald-300 font-mono shadow-[0_0_25px_rgba(16,185,129,0.4)]",
-    5: "bg-black/95 backdrop-blur-md border-4 border-dashed border-cyan-400 rounded-[20px_50px_25px_45px] text-cyan-300 font-mono italic uppercase tracking-widest shadow-[0_0_50px_rgba(6,182,212,0.9)] animate-chaotic-shake overflow-visible p-8",
-  };
-
-  const buttonStyles: Record<number, string> = {
-    1: "bg-gray-800 text-white rounded-none border border-gray-900 hover:bg-gray-900 font-boring",
-    2: "bg-[#002147] text-white rounded-xl hover:bg-[#001730] shadow-sm font-sans",
-    3: "bg-pink-500 text-black font-bold rounded-xl hover:bg-pink-400 font-sans shadow-md",
-    4: "bg-emerald-500 text-black font-bold uppercase rounded-xl hover:bg-emerald-400 tracking-wider font-mono shadow-[0_0_15px_rgba(16,185,129,0.8)]",
-    5: "bg-gradient-to-r from-yellow-400 via-fuchsia-500 to-cyan-400 text-black font-black uppercase rounded-none hover:scale-110 tracking-widest font-mono italic border-4 border-white shadow-[0_0_35px_rgba(250,204,21,1)] animate-pulse transition-transform",
-  };
-
-  const btnClass = buttonStyles[currentLevel] || buttonStyles[2];
-
-  const customLevelNames: Record<number, string> = {
+  const customLevelNames: Record<DareLevel, string> = {
     1: "Tame",
     2: "IE Appropriate",
     3: "Todos Santos",
@@ -181,7 +204,7 @@ export default function ExploreView({
   };
 
   const contentByLevel: Record<
-    number,
+    DareLevel,
     { title: string; subtitle: string; btnText: string; warningText: string }
   > = {
     1: {
@@ -200,7 +223,7 @@ export default function ExploreView({
         "No experiences match your filters. Try widening your budget, distance, or freak-o-meter level.",
     },
     3: {
-      title: "Back Home at 5AM",
+      title: "Todos Santos Vibe",
       subtitle:
         "High energy, late nights, and vibrant social immersion across the city.",
       btnText: "Drop Surprise",
@@ -215,7 +238,7 @@ export default function ExploreView({
         "No matches found within current parameters. Adjust range or budget filters.",
     },
     5: {
-      title: "A New Realm",
+      title: "You Gone",
       subtitle: "TOTAL REALITY DISSOLUTION. UNKNOWN TERRITORY AWAITS.",
       btnText: "⚡ BREAK REALITY ⚡",
       warningText:
@@ -226,8 +249,13 @@ export default function ExploreView({
   const currentContent = contentByLevel[currentLevel] || contentByLevel[2];
 
   return (
-    <div className="relative min-h-[80vh]">
-      <InteractiveBackground currentLevel={currentLevel} weather={weather} />
+    <div
+      className={`relative min-h-[80vh] ${currentLevel === 5 ? "animate-chaotic-shake" : ""}`}
+    >
+      <InteractiveBackground
+        currentLevel={currentLevel}
+        weather={activeWeather}
+      />
 
       <div className="relative z-10 space-y-6">
         <div className="flex justify-end">
@@ -236,29 +264,29 @@ export default function ExploreView({
               Weather:
             </span>
             <button
-              onClick={() => setWeather("sunny")}
-              className={`p-1.5 transition-all ${weather === "sunny" ? getWeatherBadgeStyle(currentLevel) : "opacity-40 hover:opacity-100 text-white"}`}
+              onClick={() => setActiveWeather("sunny")}
+              className={`p-1.5 transition-all ${activeWeather === "sunny" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
               title="Sunlight"
             >
               <Sun className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => setWeather("rain")}
-              className={`p-1.5 transition-all ${weather === "rain" ? getWeatherBadgeStyle(currentLevel) : "opacity-40 hover:opacity-100 text-white"}`}
+              onClick={() => setActiveWeather("rain")}
+              className={`p-1.5 transition-all ${activeWeather === "rain" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
               title="Rain"
             >
               <CloudRain className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => setWeather("snow")}
-              className={`p-1.5 transition-all ${weather === "snow" ? getWeatherBadgeStyle(currentLevel) : "opacity-40 hover:opacity-100 text-white"}`}
+              onClick={() => setActiveWeather("snow")}
+              className={`p-1.5 transition-all ${activeWeather === "snow" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
               title="Snow"
             >
               <Snowflake className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => setWeather("storm")}
-              className={`p-1.5 transition-all ${weather === "storm" ? getWeatherBadgeStyle(currentLevel) : "opacity-40 hover:opacity-100 text-white"}`}
+              onClick={() => setActiveWeather("storm")}
+              className={`p-1.5 transition-all ${activeWeather === "storm" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
               title="Storm"
             >
               <Zap className="w-3.5 h-3.5" />
@@ -268,58 +296,91 @@ export default function ExploreView({
 
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="space-y-6 lg:col-span-2">
+            {/* Filters Box */}
             <div
               className={`p-5 space-y-5 transition-all duration-300 ${cardStyleByLevel[currentLevel]}`}
             >
               <h3
-                className={`flex items-center gap-2 text-lg font-semibold ${currentLevel === 5 ? "font-mono uppercase font-black text-cyan-300 tracking-tighter italic animate-psycho-text" : ""}`}
+                className={`flex items-center gap-2 text-sm font-semibold ${currentLevel === 5 ? "font-mono font-bold text-yellow-300 animate-psycho-text animate-chaotic-shake" : ""}`}
               >
-                <Tag className="w-5 h-5 opacity-80" />
+                <Tag className="w-4 h-4 opacity-80" />
                 {currentLevel === 5
-                  ? ">>> CHOOSE YOUR POISON <<<"
+                  ? "CHOOSE YOUR POISON"
                   : "Set your preferences"}
               </h3>
 
+              {/* Time Filter Tabs */}
               <div>
                 <label
-                  className={`block mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-black tracking-widest text-fuchsia-400" : ""}`}
+                  className={`block mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-fuchsia-400 animate-chaotic-shake" : ""}`}
                 >
-                  {currentLevel === 5
-                    ? "EXPERIENCE_MATRIX //"
-                    : "Experience type"}
+                  <Calendar className="inline w-4 h-4 mr-1 opacity-80" /> Time
+                  Horizon
+                </label>
+                <div className="flex gap-2">
+                  {(["any", "today", "week", "month"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTimeFilter(t)}
+                      className={`flex-1 py-1.5 text-sm font-medium uppercase transition-all ${
+                        timeFilter === t
+                          ? activeTabClass
+                          : currentLevel === 5
+                            ? "bg-fuchsia-950 text-cyan-300 border-2 border-fuchsia-500 animate-chaotic-shake text-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300 text-sm"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Experience Types */}
+              <div>
+                <label
+                  className={`block mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-fuchsia-400 animate-chaotic-shake" : ""}`}
+                >
+                  {currentLevel === 5 ? "EXPERIENCE MATRIX" : "Experience type"}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {ALL_TYPES.map((type, idx) => {
-                    const rotationClass = getTabRotation(idx, currentLevel);
+                  <button
+                    onClick={() => toggleType("all")}
+                    className={`px-3 py-1.5 text-sm font-medium transition-all ${
+                      filters.types.length === ALL_TYPES.length
+                        ? activeTabClass
+                        : currentLevel === 5
+                          ? "bg-fuchsia-950 text-cyan-300 border-2 border-fuchsia-500 animate-chaotic-shake text-sm"
+                          : "bg-gray-100 text-gray-700 border border-gray-300 text-sm"
+                    }`}
+                  >
+                    🌟 All
+                  </button>
+                  {ALL_TYPES.map((type) => {
                     const isSelected = filters.types.includes(type);
+                    const emoji = emojis[type as keyof typeof emojis] || "✨";
+                    const label = typeLabels[type];
 
-                    let unselectedClass =
-                      "bg-gray-100 text-gray-600 hover:bg-gray-200";
-                    if (currentLevel === 1)
-                      unselectedClass =
-                        "bg-gray-100 text-gray-700 rounded-none border border-gray-300 font-boring";
-                    if (currentLevel === 2)
-                      unselectedClass =
-                        "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200";
-                    if (currentLevel === 3)
-                      unselectedClass =
-                        "bg-slate-800/80 text-pink-200 border border-pink-500/30 hover:bg-slate-700";
-                    if (currentLevel === 4)
-                      unselectedClass =
-                        "bg-stone-900 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.2)]";
-                    if (currentLevel === 5)
-                      unselectedClass =
-                        "bg-fuchsia-950/80 text-fuchsia-300 border-2 border-cyan-400 hover:bg-cyan-950 font-black tracking-tighter shadow-[0_0_15px_rgba(6,182,212,0.5)]";
+                    const unselectedClass =
+                      currentLevel === 1
+                        ? "bg-gray-100 text-gray-700 border border-gray-300 font-boring text-sm"
+                        : currentLevel === 2
+                          ? "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 text-sm"
+                          : currentLevel === 3
+                            ? "bg-slate-800/80 text-pink-200 border border-pink-500/30 hover:bg-slate-700 text-sm"
+                            : currentLevel === 4
+                              ? "bg-stone-900 text-emerald-400 border border-emerald-500/50 text-sm"
+                              : "bg-fuchsia-950/90 text-cyan-300 border-2 border-yellow-400 font-medium shadow-[0_0_20px_rgba(250,204,21,0.6)] animate-chaotic-shake text-sm";
 
                     return (
                       <button
                         key={type}
                         onClick={() => toggleType(type)}
-                        className={`px-3 py-1.5 text-sm font-medium transition-all transform ${rotationClass} ${
+                        className={`px-3 py-1.5 text-sm font-medium transition-all transform ${
                           isSelected ? activeTabClass : unselectedClass
                         }`}
                       >
-                        {typeLabels[type]}
+                        {emoji} {label}
                       </button>
                     );
                   })}
@@ -328,11 +389,11 @@ export default function ExploreView({
 
               <div>
                 <label
-                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-black tracking-widest text-cyan-300" : ""}`}
+                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-cyan-300 animate-chaotic-shake" : ""}`}
                 >
                   <Wallet className="w-4 h-4 opacity-80" />
                   {currentLevel === 5
-                    ? `BUDGET_DRAIN: ${budgetLabels[filters.budget]}`
+                    ? `Budget Drain: ${budgetLabels[filters.budget]}`
                     : `Max budget: ${budgetLabels[filters.budget]}`}
                 </label>
                 <input
@@ -347,17 +408,17 @@ export default function ExploreView({
                       budget: Number(e.target.value) as Budget,
                     })
                   }
-                  className={`w-full cursor-pointer h-3 ${currentLevel === 5 ? "bg-fuchsia-900 border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)]" : ""} ${sliderAccent}`}
+                  className={`w-full cursor-pointer h-3 rounded-lg ${currentLevel === 5 ? "bg-black border-2 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,1)] animate-chaotic-shake accent-yellow-400" : sliderAccent}`}
                 />
               </div>
 
               <div>
                 <label
-                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-black tracking-widest text-yellow-300" : ""}`}
+                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-yellow-300 animate-chaotic-shake" : ""}`}
                 >
                   <MapPin className="w-4 h-4 opacity-80" />
                   {currentLevel === 5
-                    ? `RADAR_RADIUS: ${filters.maxDistance === 100 ? "INF" : `${filters.maxDistance} KM`}`
+                    ? `Radar Radius: ${filters.maxDistance === 100 ? "INF" : `${filters.maxDistance} KM`}`
                     : `Max distance: ${filters.maxDistance === 100 ? "Any" : `${filters.maxDistance} km`}`}
                 </label>
                 <input
@@ -372,74 +433,60 @@ export default function ExploreView({
                       maxDistance: Number(e.target.value),
                     })
                   }
-                  className={`w-full cursor-pointer h-3 ${currentLevel === 5 ? "bg-fuchsia-900 border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]" : ""} ${sliderAccent}`}
+                  className={`w-full cursor-pointer h-3 rounded-lg ${currentLevel === 5 ? "bg-black border-2 border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,1)] animate-chaotic-shake accent-cyan-400" : sliderAccent}`}
                 />
               </div>
 
               <div>
                 <label
-                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-black tracking-widest text-fuchsia-300" : ""}`}
+                  className={`flex items-center gap-2 mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-fuchsia-300 animate-chaotic-shake" : ""}`}
                 >
                   <Users className="w-4 h-4 opacity-80" />
-                  {currentLevel === 5 ? "VIBE_FREQUENCY //" : "Vibe"}
+                  {currentLevel === 5 ? "Vibe Frequency" : "Vibe"}
                 </label>
                 <div className="flex gap-2">
-                  {(["any", "solo", "date", "group"] as const).map(
-                    (vibe, idx) => {
-                      const rotationClass = getTabRotation(
-                        idx + 1,
-                        currentLevel,
-                      );
-                      const isSelected = filters.vibe === vibe;
+                  {(["any", "solo", "date", "group"] as const).map((vibe) => {
+                    const isSelected = filters.vibe === vibe;
+                    const unselectedClass =
+                      currentLevel === 1
+                        ? "bg-gray-100 text-gray-700 border border-gray-300 font-boring text-sm"
+                        : currentLevel === 2
+                          ? "bg-slate-100 text-slate-700 border border-slate-200 text-sm"
+                          : currentLevel === 3
+                            ? "bg-slate-800/80 text-pink-200 border border-pink-500/30 text-sm"
+                            : currentLevel === 4
+                              ? "bg-stone-900 text-emerald-400 border border-emerald-500/50 text-sm"
+                              : "bg-fuchsia-950/90 text-cyan-300 border-2 border-yellow-400 font-medium shadow-[0_0_15px_rgba(250,204,21,0.5)] animate-chaotic-shake text-sm";
 
-                      let unselectedClass =
-                        "bg-gray-100 text-gray-600 hover:bg-gray-200";
-                      if (currentLevel === 1)
-                        unselectedClass =
-                          "bg-gray-100 text-gray-700 border border-gray-300 font-boring";
-                      if (currentLevel === 2)
-                        unselectedClass =
-                          "bg-slate-100 text-slate-700 border border-slate-200";
-                      if (currentLevel === 3)
-                        unselectedClass =
-                          "bg-slate-800/80 text-pink-200 border border-pink-500/30";
-                      if (currentLevel === 4)
-                        unselectedClass =
-                          "bg-stone-900 text-emerald-400 border border-emerald-500/50";
-                      if (currentLevel === 5)
-                        unselectedClass =
-                          "bg-fuchsia-950/80 text-fuchsia-300 border-2 border-yellow-400 font-black tracking-tighter shadow-[0_0_12px_rgba(250,204,21,0.4)]";
-
-                      return (
-                        <button
-                          key={vibe}
-                          onClick={() => onFiltersChange({ ...filters, vibe })}
-                          className={`flex-1 py-2 text-sm font-medium transition-all transform ${rotationClass} ${
-                            isSelected ? activeTabClass : unselectedClass
-                          }`}
-                        >
-                          {vibeLabels[vibe]}
-                        </button>
-                      );
-                    },
-                  )}
+                    return (
+                      <button
+                        key={vibe}
+                        onClick={() => onFiltersChange({ ...filters, vibe })}
+                        className={`flex-1 py-2 text-sm font-medium transition-all ${
+                          isSelected ? activeTabClass : unselectedClass
+                        }`}
+                      >
+                        {vibeLabels[vibe]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="pt-3 border-t border-gray-200/20">
                 <div className="flex items-center justify-between mb-2">
                   <label
-                    className={`flex items-center gap-2 text-sm font-medium ${currentLevel === 5 ? "font-black text-white tracking-widest animate-psycho-text" : ""}`}
+                    className={`flex items-center gap-2 text-sm font-medium ${currentLevel === 5 ? "font-bold text-white animate-psycho-text animate-chaotic-shake" : ""}`}
                   >
                     <Zap className="w-4 h-4 opacity-80" />{" "}
                     {currentLevel === 5
-                      ? "HALLUCINATION LEVEL"
+                      ? "Hallucination Level"
                       : "Freak-O-Meter"}
                   </label>
                   <span
                     className={`text-xs font-bold px-2.5 py-0.5 ${activeTabClass}`}
                   >
-                    L{currentLevel}: {customLevelNames[currentLevel]}
+                    Level {currentLevel}: {customLevelNames[currentLevel]}
                   </span>
                 </div>
                 <input
@@ -454,18 +501,49 @@ export default function ExploreView({
                       dareLevel: Number(e.target.value) as DareLevel,
                     })
                   }
-                  className={`w-full h-4 appearance-none cursor-pointer ${currentLevel === 5 ? "bg-gradient-to-r from-fuchsia-600 via-cyan-400 to-yellow-400 border-2 border-white shadow-[0_0_20px_rgba(217,70,239,1)]" : "bg-gray-200"} focus:outline-none ${sliderAccent}`}
+                  className={`w-full h-4 appearance-none cursor-pointer rounded-lg ${currentLevel === 5 ? "bg-black border-4 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,1)] animate-chaotic-shake accent-cyan-400 rotate-1" : sliderAccent}`}
                 />
               </div>
             </div>
 
+            {/* Live Weather Widget */}
+            <div
+              className={`p-4 flex items-center justify-between text-sm backdrop-blur-md border rounded-xl shadow-sm ${currentLevel === 3 ? "bg-slate-900/80 border-pink-500/50 text-pink-200" : currentLevel === 5 ? "bg-fuchsia-950/90 border-4 border-dashed border-cyan-400 text-cyan-300 font-mono animate-chaotic-shake" : currentLevel >= 4 ? "bg-black/80 border-emerald-500/50 text-emerald-300 font-mono" : "bg-white/80 border-slate-200 text-slate-800"}`}
+            >
+              <div className="flex items-center gap-2">
+                {activeWeather === "sunny" && (
+                  <Sun className="w-5 h-5 text-amber-400" />
+                )}
+                {activeWeather === "rain" && (
+                  <CloudRain className="w-5 h-5 text-blue-400" />
+                )}
+                {activeWeather === "snow" && (
+                  <Snowflake className="w-5 h-5 text-cyan-300" />
+                )}
+                {activeWeather === "storm" && (
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                )}
+                <div>
+                  <p className="text-xs font-bold tracking-wider uppercase">
+                    Madrid, Spain
+                  </p>
+                  <p className="text-xs capitalize opacity-80">
+                    {activeWeather} • 22°C
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-black/20 uppercase tracking-widest font-bold">
+                API Connected
+              </span>
+            </div>
+
             {loadingLive && (
               <div
-                className={`text-xs flex items-center gap-2 ${currentLevel === 5 ? "text-yellow-300 font-black animate-bounce" : currentLevel === 4 ? "text-emerald-400 font-mono" : "text-ie-cyan font-semibold"}`}
+                className={`text-xs flex items-center gap-2 ${currentLevel === 5 ? "text-yellow-300 font-bold animate-bounce animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-400 font-mono" : "text-ie-cyan font-semibold"}`}
               >
                 <Flame className="w-3 h-3" />
                 {currentLevel === 5
-                  ? "SEARCHING UNTREATED FREAK EVENTS..."
+                  ? "Searching untreated freak events..."
                   : "Searching live events..."}
               </div>
             )}
@@ -480,7 +558,7 @@ export default function ExploreView({
 
           <div className="space-y-6 lg:col-span-3">
             <div
-              className={`p-8 text-center space-y-4 transition-all duration-300 ${surpriseCardStyle[currentLevel]}`}
+              className={`p-8 text-center space-y-4 transition-all duration-300 ${cardStyleByLevel[currentLevel]}`}
             >
               {!surprise ? (
                 <div className="space-y-4">
@@ -488,7 +566,7 @@ export default function ExploreView({
                     className={`inline-block p-4 ${currentLevel === 1 ? "bg-gray-100 rounded-none border border-gray-300" : currentLevel === 2 ? "bg-slate-100 rounded-2xl border border-slate-200" : "bg-gray-100/10 rounded-2xl"}`}
                   >
                     {currentLevel === 5 ? (
-                      <Skull className="w-10 h-10 text-yellow-300 animate-spin" />
+                      <Skull className="w-12 h-12 text-yellow-300 animate-spin animate-chaotic-shake" />
                     ) : currentLevel === 4 ? (
                       <Flame className="w-8 h-8 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
                     ) : currentLevel === 3 ? (
@@ -500,19 +578,19 @@ export default function ExploreView({
                     )}
                   </div>
                   <h3
-                    className={`text-xl font-bold ${currentLevel === 5 ? "font-black tracking-tighter text-fuchsia-400 text-2xl uppercase animate-psycho-text" : currentLevel === 4 ? "text-emerald-400 tracking-widest uppercase font-black" : currentLevel === 3 ? "text-pink-300 uppercase tracking-wide font-black" : ""}`}
+                    className={`text-lg font-bold ${currentLevel === 5 ? "font-bold text-yellow-300 uppercase animate-psycho-text animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-400 tracking-widest uppercase font-bold" : currentLevel === 3 ? "text-pink-300 uppercase tracking-wide font-bold" : ""}`}
                   >
                     {currentContent.title}
                   </h3>
                   <p
-                    className={`text-sm opacity-80 max-w-sm mx-auto ${currentLevel === 5 ? "font-mono uppercase font-bold text-yellow-300 tracking-widest" : currentLevel === 4 ? "text-emerald-300/80 font-mono text-xs uppercase" : ""}`}
+                    className={`text-sm opacity-80 max-w-sm mx-auto ${currentLevel === 5 ? "font-mono font-bold text-cyan-300 animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-300/80 font-mono text-xs uppercase" : ""}`}
                   >
                     {currentContent.subtitle}
                   </p>
                   <button
                     onClick={onGenerate}
                     disabled={isGenerating}
-                    className={`px-6 py-3 font-bold transition-all ${btnClass}`}
+                    className={`px-6 py-3 font-semibold transition-all ${activeTabClass}`}
                   >
                     {isGenerating ? "SUMMONING..." : currentContent.btnText}
                   </button>
@@ -520,19 +598,19 @@ export default function ExploreView({
               ) : (
                 <div className="space-y-4">
                   <h3
-                    className={`text-2xl font-black ${currentLevel === 5 ? "text-yellow-400 uppercase italic tracking-tighter animate-psycho-text text-3xl" : currentLevel === 4 ? "text-emerald-300 uppercase font-mono tracking-widest" : ""}`}
+                    className={`text-xl font-bold ${currentLevel === 5 ? "text-yellow-400 uppercase animate-psycho-text animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-300 uppercase font-mono tracking-widest" : ""}`}
                   >
                     {surprise.title}
                   </h3>
                   <p
-                    className={`text-sm opacity-80 ${currentLevel === 5 ? "font-mono uppercase tracking-widest text-fuchsia-300 font-bold" : currentLevel === 4 ? "text-emerald-400/80 font-mono" : ""}`}
+                    className={`text-sm opacity-80 ${currentLevel === 5 ? "font-mono text-cyan-300 font-bold animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-400/80 font-mono" : ""}`}
                   >
                     {surprise.description}
                   </p>
                   <div className="flex justify-center gap-3 pt-2">
                     <button
                       onClick={onAccept}
-                      className={`px-5 py-2.5 font-bold ${btnClass}`}
+                      className={`px-5 py-2.5 font-semibold ${activeTabClass}`}
                     >
                       {currentLevel === 5
                         ? "CONSUME DARE"
@@ -542,7 +620,7 @@ export default function ExploreView({
                     </button>
                     <button
                       onClick={onSkip}
-                      className={`px-5 py-2.5 text-sm font-semibold opacity-70 hover:opacity-100 ${currentLevel === 5 ? "text-cyan-400 uppercase tracking-widest font-black" : currentLevel === 4 ? "text-emerald-500 font-mono" : ""}`}
+                      className={`px-5 py-2.5 text-sm font-semibold opacity-70 hover:opacity-100 ${currentLevel === 5 ? "text-cyan-400 uppercase font-bold animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-500 font-mono" : ""}`}
                     >
                       {currentLevel === 5
                         ? "FLEE"
@@ -566,7 +644,7 @@ export default function ExploreView({
                         ? "bg-pink-950/80 border-2 border-pink-500 text-pink-200 rounded-xl font-sans shadow-lg"
                         : currentLevel === 4
                           ? "bg-stone-900 border-2 border-emerald-500 text-emerald-400 font-mono tracking-widest uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                          : "bg-fuchsia-950/90 border-4 border-dashed border-yellow-400 text-yellow-300 rounded-[15px_35px_15px_30px] font-mono uppercase font-black italic tracking-widest shadow-[0_0_30px_rgba(250,204,21,0.8)] animate-psycho-text"
+                          : "bg-fuchsia-950/90 border-4 border-dashed border-yellow-400 text-yellow-300 rounded-[15px_35px_15px_30px] font-mono uppercase font-bold italic tracking-widest shadow-[0_0_30px_rgba(250,204,21,0.8)] animate-psycho-text animate-chaotic-shake"
                 }`}
               >
                 {currentContent.warningText}

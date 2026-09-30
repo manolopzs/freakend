@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { WeatherCondition } from "@/lib/types";
+
+type WeatherCondition = "sunny" | "rain" | "snow" | "storm";
 
 interface Props {
   currentLevel: number;
@@ -57,7 +58,7 @@ export default function InteractiveBackground({
       heightFactor: Math.random() * 0.6 + 0.3,
     }));
 
-    const cyberGridLines = Array.from({ length: 40 }, (_, i) => i * 60);
+    const cyberGridLines = Array.from({ length: 20 }, (_, i) => i * 100);
 
     const psychoNodes = Array.from({ length: 50 }, () => ({
       x: Math.random() * width,
@@ -70,12 +71,23 @@ export default function InteractiveBackground({
       ],
     }));
 
-    const weatherParticles = Array.from({ length: 150 }, () => ({
+    const rainParticles = Array.from({ length: 120 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      speedY: Math.random() * 8 + 4,
-      speedX: (Math.random() - 0.5) * 2,
-      size: Math.random() * 2.5 + 1,
+      speedY: Math.random() * 10 + 6,
+      speedX: (Math.random() - 0.5) * 1.8 - 1,
+      length: Math.random() * 20 + 10,
+    }));
+
+    const snowParticles = Array.from({ length: 80 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      speedY: Math.random() * 1.0 + 0.3,
+      speedX: (Math.random() - 0.5) * 0.4,
+      size: Math.random() * 5 + 3,
+      isCrystal: Math.random() < 0.25,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.02,
     }));
 
     let lightningTimer = 0;
@@ -90,12 +102,12 @@ export default function InteractiveBackground({
       const segments = [{ x: currX, y: currY }];
 
       while (currY < height) {
-        currX += (Math.random() - 0.5) * 140;
+        currX += (Math.random() - 0.5) * 160;
         currY += Math.random() * 60 + 20;
         segments.push({ x: currX, y: currY });
       }
       activeBolts.push({ segments, alpha: 1.0 });
-      screenFlashAlpha = 0.45;
+      screenFlashAlpha = 0.5;
     };
 
     let time = 0;
@@ -109,11 +121,17 @@ export default function InteractiveBackground({
 
       ctx.save();
 
-      // --- INTENSE LEVEL 5 SCREEN SHAKE ---
       if (currentLevel === 5) {
         const shakeX = (Math.random() - 0.5) * 12;
         const shakeY = (Math.random() - 0.5) * 12;
         ctx.translate(shakeX, shakeY);
+      }
+
+      if (currentLevel === 3) {
+        const thump = Math.sin(time * 6) * 0.015 + 1.0;
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(thump, thump);
+        ctx.translate(-width / 2, -height / 2);
       }
 
       if (currentLevel === 1) {
@@ -172,7 +190,7 @@ export default function InteractiveBackground({
         ctx.fillStyle = "rgba(15, 5, 25, 0.88)";
         ctx.fillRect(0, 0, width, height);
 
-        const bassBeat = Math.sin(time * 5) * 0.5 + 0.5;
+        const bassBeat = Math.sin(time * 6) * 0.5 + 0.5;
         const ambientGlow = ctx.createRadialGradient(
           width / 2,
           height / 2,
@@ -183,7 +201,7 @@ export default function InteractiveBackground({
         );
         ambientGlow.addColorStop(
           0,
-          `rgba(236, 72, 153, ${0.15 + bassBeat * 0.15})`,
+          `rgba(236, 72, 153, ${0.15 + bassBeat * 0.25})`,
         );
         ambientGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
         ctx.fillStyle = ambientGlow;
@@ -191,9 +209,9 @@ export default function InteractiveBackground({
 
         laserBars.forEach((bar, index) => {
           const currentHeight =
-            (Math.sin(time * 7 + index * 0.5) * 0.5 + 0.5) *
+            (Math.sin(time * 6 + index * 0.5) * 0.5 + 0.5) *
             height *
-            0.3 *
+            0.35 *
             bar.heightFactor;
           const barWidth = width / laserBars.length - 6;
           const x = index * (width / laserBars.length) + 3;
@@ -215,40 +233,19 @@ export default function InteractiveBackground({
         ctx.fillStyle = "#030712";
         ctx.fillRect(0, 0, width, height);
 
-        const horizonY = 0;
-        const gridOffset = (time * 40) % 60;
-
-        ctx.strokeStyle = "#10b981";
-        ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = "#10b981";
-        ctx.beginPath();
-        ctx.moveTo(0, horizonY);
-        ctx.lineTo(width, horizonY);
-        ctx.stroke();
-
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.35)";
-        ctx.lineWidth = 1.2;
+        const gridOffset = (time * 25) % 100;
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.25)";
+        ctx.lineWidth = 1;
 
         cyberGridLines.forEach((yOffset) => {
-          const currentY = horizonY + ((yOffset + gridOffset) % height);
+          const currentY = (yOffset + gridOffset) % height;
           ctx.beginPath();
           ctx.moveTo(0, currentY);
           ctx.lineTo(width, currentY);
           ctx.stroke();
         });
-
-        for (let x = -width; x <= width * 2; x += 100) {
-          ctx.beginPath();
-          ctx.moveTo(width / 2, horizonY);
-          ctx.lineTo(x, height + 100);
-          ctx.stroke();
-        }
-
-        ctx.shadowBlur = 0;
       } else if (currentLevel === 5) {
         const psychoHue = (time * 25) % 360;
-
         const psychoBg = ctx.createRadialGradient(
           mouse.x,
           mouse.y,
@@ -290,80 +287,128 @@ export default function InteractiveBackground({
         });
       }
 
-      // --- WEATHER RENDER OVERLAYS ---
+      // --- RAIN EFFECT (Red in Level 5) ---
       if (weather === "rain") {
         ctx.strokeStyle =
-          currentLevel === 1
-            ? "rgba(100, 116, 139, 0.6)"
-            : currentLevel === 5
-              ? "rgba(239, 68, 68, 0.8)"
-              : currentLevel === 4
-                ? "rgba(16, 185, 129, 0.8)"
-                : "rgba(148, 163, 184, 0.7)";
+          currentLevel === 5
+            ? "rgba(239, 68, 68, 0.9)"
+            : currentLevel === 1
+              ? "rgba(100, 116, 139, 0.6)"
+              : "rgba(148, 163, 184, 0.75)";
         ctx.lineWidth = 1.5;
-        weatherParticles.forEach((p) => {
-          p.y += p.speedY * 2.5;
+        rainParticles.forEach((p) => {
+          p.y += p.speedY;
           p.x += p.speedX;
           if (p.y > height) {
-            p.y = 0;
+            p.y = -20;
             p.x = Math.random() * width;
           }
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x + p.speedX, p.y + p.speedY * 2.5);
+          ctx.lineTo(p.x + p.speedX, p.y + p.length);
           ctx.stroke();
         });
-      } else if (weather === "snow") {
-        ctx.fillStyle =
-          currentLevel === 1
-            ? "#64748b"
-            : currentLevel === 4
-              ? "#10b981"
-              : currentLevel === 5
-                ? "#facc15"
-                : "#FFFFFF";
-        weatherParticles.forEach((p) => {
-          p.y += p.speedY * 0.4;
-          p.x += Math.sin(p.y * 0.03) * 1.5;
+      }
+      // --- SNOW EFFECT (Green in Level 5) ---
+      else if (weather === "snow") {
+        snowParticles.forEach((p) => {
+          p.y += p.speedY * 0.35;
+          p.x += Math.sin(p.y * 0.015) * 0.5;
+          p.rotation += p.rotSpeed;
+
           if (p.y > height) {
-            p.y = 0;
+            p.y = -10;
             p.x = Math.random() * width;
           }
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
-          ctx.fill();
+
+          if (p.isCrystal) {
+            ctx.strokeStyle =
+              currentLevel === 5
+                ? "#22c55e"
+                : currentLevel === 1
+                  ? "#64748b"
+                  : "#FFFFFF";
+            ctx.lineWidth = 1.2;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+
+            for (let i = 0; i < 6; i++) {
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(0, p.size);
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.moveTo(0, p.size * 0.6);
+              ctx.lineTo(p.size * 0.3, p.size * 0.8);
+              ctx.moveTo(0, p.size * 0.6);
+              ctx.lineTo(-p.size * 0.3, p.size * 0.8);
+              ctx.stroke();
+
+              ctx.rotate(Math.PI / 3);
+            }
+            ctx.restore();
+          } else {
+            ctx.fillStyle =
+              currentLevel === 5
+                ? "rgba(34, 197, 94, 0.9)"
+                : currentLevel === 1
+                  ? "#94a3b8"
+                  : "rgba(255, 255, 255, 0.85)";
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
         });
-      } else if (weather === "storm") {
+      }
+      // --- STORM EFFECT (Red rain + bright lightning in Level 5) ---
+      else if (weather === "storm") {
         lightningTimer++;
-        if (lightningTimer > 60 && Math.random() > 0.25) {
+        if (lightningTimer > 90 && Math.random() > 0.3) {
           triggerLightningBolt();
           lightningTimer = 0;
         }
 
         if (screenFlashAlpha > 0) {
           ctx.fillStyle =
-            currentLevel === 1
-              ? `rgba(203, 213, 225, ${screenFlashAlpha})`
-              : currentLevel === 4
-                ? `rgba(16, 185, 129, ${screenFlashAlpha})`
-                : currentLevel === 5
-                  ? `rgba(250, 204, 21, ${screenFlashAlpha})`
-                  : `rgba(255, 255, 255, ${screenFlashAlpha})`;
+            currentLevel === 5
+              ? `rgba(239, 68, 68, ${screenFlashAlpha})`
+              : currentLevel === 1
+                ? `rgba(203, 213, 225, ${screenFlashAlpha})`
+                : `rgba(255, 255, 255, ${screenFlashAlpha})`;
           ctx.fillRect(0, 0, width, height);
-          screenFlashAlpha -= 0.08;
+          screenFlashAlpha -= 0.06;
         }
 
         ctx.strokeStyle =
-          currentLevel === 1
-            ? "#475569"
-            : currentLevel === 4
-              ? "#10b981"
-              : currentLevel === 5
-                ? "#facc15"
-                : "#93c5fd";
-        ctx.lineWidth = 3.5;
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = ctx.strokeStyle;
+          currentLevel === 5
+            ? "rgba(239, 68, 68, 0.9)"
+            : currentLevel === 1
+              ? "rgba(71, 85, 105, 0.85)"
+              : "rgba(186, 230, 253, 0.85)";
+        ctx.lineWidth = 1.8;
+        rainParticles.forEach((p) => {
+          p.y += p.speedY * 1.2;
+          p.x += p.speedX * 1.3;
+          if (p.y > height) {
+            p.y = -20;
+            p.x = Math.random() * width;
+          }
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + p.speedX * 1.5, p.y + p.length * 1.1);
+          ctx.stroke();
+        });
+
+        ctx.strokeStyle =
+          currentLevel === 5
+            ? "#ef4444"
+            : currentLevel === 1
+              ? "#334155"
+              : "#e0f2fe";
+        ctx.lineWidth = 2.5;
 
         activeBolts.forEach((bolt, idx) => {
           ctx.globalAlpha = bolt.alpha;
@@ -373,11 +418,10 @@ export default function InteractiveBackground({
             else ctx.lineTo(seg.x, seg.y);
           });
           ctx.stroke();
-          bolt.alpha -= 0.12;
+          bolt.alpha -= 0.08;
           if (bolt.alpha <= 0) activeBolts.splice(idx, 1);
         });
 
-        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1.0;
       }
 
