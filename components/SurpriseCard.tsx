@@ -8,12 +8,13 @@ import { MapPin, Wallet, Zap, Users, Sparkles, RefreshCw, Check, X, Share2, Exte
 interface Props {
   experience: Experience | null;
   isGenerating: boolean;
+  hasMatches: boolean;
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
 }
 
-export default function SurpriseCard({ experience, isGenerating, onGenerate, onAccept, onSkip }: Props) {
+export default function SurpriseCard({ experience, isGenerating, hasMatches, onGenerate, onAccept, onSkip }: Props) {
   const [revealed, setRevealed] = useState(false);
 
   const handleGenerate = () => {
@@ -32,11 +33,16 @@ export default function SurpriseCard({ experience, isGenerating, onGenerate, onA
         <p className="text-gray-600 mb-6">Set your filters and let Freakend pick a Madrid experience you might never choose yourself.</p>
         <button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || !hasMatches}
           className="bg-ie-red hover:bg-red-800 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-60"
         >
           {isGenerating ? 'Choosing...' : 'Surprise Me'}
         </button>
+        {!hasMatches && (
+          <p className="mt-4 text-sm text-red-600">
+            No experiences match your filters. Adjust them to unlock a surprise.
+          </p>
+        )}
       </div>
     );
   }

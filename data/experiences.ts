@@ -56,7 +56,7 @@ export const experiences: Omit<Experience, 'source'>[] = [
     neighborhood: 'La Latina',
     vibe: 'solo',
     dareLevel: 2,
-    emoji: '锝',
+    emoji: '🧭',
     address: 'Calle de la Ribera de Curtidores, 28005 Madrid',
     whySpecial: 'Sundays only. Vintage posters, antiques, and street musicians everywhere.',
     ieHook: 'Find a desk trinket that sparks a conversation in class.',

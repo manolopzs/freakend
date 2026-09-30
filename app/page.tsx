@@ -158,6 +158,7 @@ export default function Home() {
 
   const isLoggedIn = !!profile.email;
   const currentBadge = newBadges.length > 0 ? newBadges[0] : null;
+  const badge = currentBadge ? BADGES.find((b) => b.id === currentBadge) : undefined;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -213,6 +214,7 @@ export default function Home() {
             <SurpriseCard
               experience={surprise}
               isGenerating={isGenerating}
+              hasMatches={filteredExperiences.length > 0}
               onGenerate={generateSurprise}
               onAccept={acceptDare}
               onSkip={skipDare}
@@ -229,12 +231,7 @@ export default function Home() {
         </div>
       </div>
 
-      {currentBadge && (
-        <NewBadgeToast
-          badge={BADGES.find((b) => b.id === currentBadge)!}
-          onClose={dismissBadge}
-        />
-      )}
+      {badge && <NewBadgeToast badge={badge} onClose={dismissBadge} />}
 
       {!isLoggedIn && <AuthModal onLogin={handleLogin} />}
     </main>

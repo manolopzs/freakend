@@ -4,11 +4,13 @@ import { Badge } from '@/lib/types';
 import { Award } from 'lucide-react';
 
 interface Props {
-  badge: Badge;
+  badge?: Badge | null;
   onClose: () => void;
 }
 
 export default function NewBadgeToast({ badge, onClose }: Props) {
+  if (!badge) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full animate-pop">

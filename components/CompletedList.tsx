@@ -26,11 +26,13 @@ export default function CompletedList({ profile, experiences }: Props) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
       <h3 className="text-lg font-semibold mb-4">Your dares</h3>
       <div className="space-y-3">
-        {ordered.map((c) => {
+        {ordered.map((c, index) => {
           const exp = expMap.get(c.id);
           if (!exp) return null;
+          // Display base points only; actual completion adds a streak bonus in calculatePoints.
+          const basePoints = 20 + exp.dareLevel * 10 + exp.budget * 5;
           return (
-            <div key={c.id + c.completedAt} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+            <div key={`${c.id}-${c.completedAt}-${index}`} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
               {exp.photoUrl ? (
                 <img src={exp.photoUrl} alt={exp.title} className="w-12 h-12 rounded-lg object-cover shrink-0" />
               ) : (
@@ -48,7 +50,12 @@ export default function CompletedList({ profile, experiences }: Props) {
                 <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
                   <Calendar className="w-3 h-3" />
                   {new Date(c.completedAt).toLocaleDateString()}
-                  <span className="ml-2 text-ie-red font-medium">+{20 + exp.dareLevel * 10 + exp.budget * 5} pts</span>
+                  <span
+                    className="ml-2 text-ie-red font-medium"
+                    title="Base points only; actual total may include a streak bonus"
+                  >
+                    +{basePoints} pts
+                  </span>
                 </div>
               </div>
             </div>

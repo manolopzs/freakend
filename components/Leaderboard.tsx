@@ -41,7 +41,7 @@ export default function Leaderboard({ profile }: Props) {
       <div className="space-y-2">
         {allUsers.map((user, index) => (
           <div
-            key={user.name}
+            key={`${user.name}-${index}`}
             className={`flex items-center gap-3 p-3 rounded-xl ${
               user.isCurrentUser ? 'bg-ie-red/10 border border-ie-red/20' : 'bg-gray-50'
             }`}

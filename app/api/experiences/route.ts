@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Experience, ExperienceType, Budget, Vibe, DareLevel } from '@/lib/types';
 import { curatedExperiences } from '@/data/experiences';
 
+// TODO: Move API keys to server-only environment variables.
+// They are currently only used in server-side requests, which is acceptable for an MVP.
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || '';
 const EVENTBRITE_TOKEN = process.env.EVENTBRITE_API_TOKEN || '';
 const TICKETMASTER_KEY = process.env.TICKETMASTER_API_KEY || '';
@@ -29,6 +31,7 @@ async function fetchGooglePlaces(type: ExperienceType): Promise<Experience[]> {
 
   try {
     const res = await fetch(url);
+    if (!res.ok) return [];
     const data = await res.json();
     if (!data.results) return [];
 
@@ -69,6 +72,7 @@ async function fetchEventbrite(): Promise<Experience[]> {
 
   try {
     const res = await fetch(url);
+    if (!res.ok) return [];
     const data = await res.json();
     if (!data.events) return [];
 
@@ -101,6 +105,7 @@ async function fetchTicketmaster(): Promise<Experience[]> {
 
   try {
     const res = await fetch(url);
+    if (!res.ok) return [];
     const data = await res.json();
     const events = data._embedded?.events || [];
 
@@ -146,7 +151,16 @@ function distanceToIE(lat: number, lng: number): number {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const typesParam = searchParams.get('types') || 'food,nightlife,culture,adventure,wellness';
-  const types = typesParam.split(',') as ExperienceType[];
+  const requestedTypes = typesParam.split(',').map((t) => t.trim()).filter(Boolean);
+  const validTypes: ExperienceType[] = ['food', 'nightlife', 'culture', 'adventure', 'wellness'];
+  const invalid = requestedTypes.filter((t) => !validTypes.includes(t as ExperienceType));
+  if (invalid.length > 0) {
+    return NextResponse.json(
+      { error: `Invalid experience type(s): ${invalid.join(', ')}` },
+      { status: 400 }
+    );
+  }
+  const types = requestedTypes as ExperienceType[];
 
   const liveResults: Experience[] = [];
 
