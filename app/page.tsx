@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Experience, Filters, UserProfile } from '@/lib/types';
+
+interface Weather {
+  temp: number;
+  condition: string;
+  icon: string;
+  location: string;
+}
 import { curatedExperiences } from '@/data/experiences';
 import { loadFilters, loadProfile, saveFilters, saveProfile, loadAllProfiles, getDefaultProfile } from '@/lib/storage';
 import { calculatePoints, updateStreak, computeLevel, checkNewBadges, BADGES } from '@/lib/gamification';
@@ -26,11 +33,24 @@ export default function Home() {
   const [experiences, setExperiences] = useState<Experience[]>(curatedExperiences);
   const [liveMeta, setLiveMeta] = useState<{ liveCount: number; apis: Record<string, boolean> } | null>(null);
   const [loadingLive, setLoadingLive] = useState(false);
+  const [weather, setWeather] = useState<Weather | null>(null);
 
   useEffect(() => {
     setMounted(true);
     setProfile(loadProfile());
     setFilters(loadFilters());
+
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch('/api/weather?lat=40.4168&lng=-3.7038');
+        if (!res.ok) return;
+        const data = await res.json();
+        setWeather(data);
+      } catch {
+        setWeather(null);
+      }
+    };
+    fetchWeather();
   }, []);
 
   useEffect(() => {
@@ -48,7 +68,9 @@ export default function Home() {
       setLoadingLive(true);
       try {
         const types = filters.types.join(',');
-        const res = await fetch(`/api/experiences?types=${encodeURIComponent(types)}`);
+        const res = await fetch(
+          `/api/experiences?types=${encodeURIComponent(types)}&dateWindow=${encodeURIComponent(filters.dateWindow)}`
+        );
         const data = await res.json();
         setExperiences(data.experiences);
         setLiveMeta({ liveCount: data.meta.liveCount, apis: data.meta.apis });
@@ -68,7 +90,7 @@ export default function Home() {
     return experiences.filter((exp) => {
       if (filters.types.length > 0 && !filters.types.includes(exp.type)) return false;
       if (exp.budget > filters.budget) return false;
-      if (filters.maxDistance < 100 && exp.distanceKm > filters.maxDistance) return false;
+      if (exp.distanceKm > filters.maxDistance) return false;
       if (filters.vibe !== 'any' && exp.vibe !== filters.vibe) return false;
       if (filters.dareLevel !== 'any' && exp.dareLevel !== filters.dareLevel) return false;
       return true;
@@ -263,6 +285,7 @@ export default function Home() {
             hasMatches={filteredExperiences.length > 0}
             liveMeta={liveMeta}
             loadingLive={loadingLive}
+            weather={weather}
             onGenerate={generateSurprise}
             onAccept={acceptDare}
             onSkip={skipDare}

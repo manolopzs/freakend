@@ -1,4 +1,4 @@
-export type ExperienceType = 'food' | 'nightlife' | 'culture' | 'adventure' | 'wellness';
+export type ExperienceType = 'food' | 'nightlife' | 'culture' | 'adventure' | 'wellness' | 'sports' | 'concerts';
 export type Vibe = 'solo' | 'date' | 'group';
 export type Budget = 1 | 2 | 3 | 4;
 export type DareLevel = 1 | 2 | 3 | 4 | 5;
@@ -30,6 +30,7 @@ export interface Filters {
   maxDistance: number;
   vibe: Vibe | 'any';
   dareLevel: DareLevel | 'any';
+  dateWindow: 'day' | 'weekend' | 'month' | 'any';
 }
 
 export interface CompletedExperience {

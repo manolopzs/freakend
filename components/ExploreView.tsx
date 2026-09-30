@@ -3,7 +3,7 @@
 import { Experience, Filters } from '@/lib/types';
 import FilterPanel from '@/components/FilterPanel';
 import SurpriseCard from '@/components/SurpriseCard';
-import { Sparkles, Globe } from 'lucide-react';
+import { Sparkles, Globe, Cloud } from 'lucide-react';
 
 interface Props {
   filters: Filters;
@@ -14,6 +14,7 @@ interface Props {
   hasMatches: boolean;
   liveMeta: { liveCount: number; apis: Record<string, boolean> } | null;
   loadingLive: boolean;
+  weather?: { temp: number; condition: string; icon: string; location: string } | null;
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
@@ -29,6 +30,7 @@ export default function ExploreView({
   hasMatches,
   liveMeta,
   loadingLive,
+  weather,
   onGenerate,
   onAccept,
   onSkip,
@@ -48,6 +50,18 @@ export default function ExploreView({
 
       <div className="grid gap-5 lg:grid-cols-5">
         <div className="lg:col-span-2 space-y-5">
+          {weather && (
+            <div className="comic-panel p-4 flex items-center gap-4">
+              <div className="text-4xl">{weather.icon}</div>
+              <div>
+                <div className="text-2xl font-black text-white leading-none">{weather.temp}°C</div>
+                <div className="text-xs font-black text-freak-cyan uppercase tracking-wider">{weather.condition}</div>
+                <div className="text-[10px] font-bold text-white/50 uppercase flex items-center gap-1">
+                  <Cloud className="w-3 h-3" /> {weather.location}
+                </div>
+              </div>
+            </div>
+          )}
           <FilterPanel filters={filters} onChange={onFiltersChange} />
           {loadingLive && (
             <div className="text-xs font-bold text-freak-cyan flex items-center gap-2">

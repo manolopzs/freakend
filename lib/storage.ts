@@ -38,11 +38,12 @@ export function saveProfile(profile: UserProfile): void {
 
 export function getDefaultFilters(): Filters {
   return {
-    types: ['food', 'nightlife', 'culture', 'adventure', 'wellness'],
+    types: ['food', 'nightlife', 'culture', 'adventure', 'wellness', 'sports', 'concerts'],
     budget: 4,
-    maxDistance: 100,
+    maxDistance: 10,
     vibe: 'any',
     dareLevel: 'any',
+    dateWindow: 'any',
   };
 }
 

@@ -14,6 +14,8 @@ const typeToGoogleKeyword: Record<ExperienceType, string> = {
   culture: 'museum',
   adventure: 'tourist_attraction',
   wellness: 'spa',
+  sports: 'stadium',
+  concerts: 'concert_hall',
 };
 
 const typeToBudget = (level: number): Budget => {
@@ -27,7 +29,7 @@ async function fetchGooglePlaces(type: ExperienceType): Promise<Experience[]> {
   if (!GOOGLE_API_KEY) return [];
 
   const keyword = typeToGoogleKeyword[type];
-  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=40.4168,-3.7038&radius=5000&keyword=${keyword}&key=${GOOGLE_API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=40.4168,-3.7038&radius=10000&keyword=${keyword}&key=${GOOGLE_API_KEY}`;
 
   try {
     const res = await fetch(url);
@@ -49,9 +51,22 @@ async function fetchGooglePlaces(type: ExperienceType): Promise<Experience[]> {
         budget: typeToBudget(place.price_level || 2),
         distanceKm: Math.round(((place.geometry?.location && distanceToIE(place.geometry.location.lat, place.geometry.location.lng)) || 2) * 10) / 10,
         neighborhood: place.vicinity?.split(',')?.slice(-2)?.[0]?.trim() || 'Madrid',
-        vibe: type === 'wellness' ? 'solo' : type === 'nightlife' ? 'group' : 'date',
-        dareLevel: type === 'adventure' ? 3 : 2,
-        emoji: type === 'food' ? '🍽️' : type === 'nightlife' ? '🍸' : type === 'culture' ? '🏛️' : type === 'adventure' ? '🎯' : '🧖',
+        vibe: type === 'wellness' ? 'solo' : type === 'nightlife' || type === 'concerts' ? 'group' : 'date',
+        dareLevel: type === 'adventure' || type === 'sports' ? 3 : 2,
+        emoji:
+          type === 'food'
+            ? '🍽️'
+            : type === 'nightlife'
+            ? '🍸'
+            : type === 'culture'
+            ? '🏛️'
+            : type === 'adventure'
+            ? '🎯'
+            : type === 'sports'
+            ? '⚽'
+            : type === 'concerts'
+            ? '🎸'
+            : '🧖',
         address: place.vicinity || 'Madrid',
         whySpecial: `Rated ${place.rating || '?'} on Google with ${place.user_ratings_total || 0} reviews.`,
         photoUrl,
@@ -65,7 +80,7 @@ async function fetchGooglePlaces(type: ExperienceType): Promise<Experience[]> {
   }
 }
 
-async function fetchEventbrite(): Promise<Experience[]> {
+async function fetchEventbrite(dateWindow: DateWindow): Promise<Experience[]> {
   if (!EVENTBRITE_TOKEN) return [];
 
   const url = `https://www.eventbriteapi.com/v3/events/search/?location.latitude=40.4168&location.longitude=-3.7038&location.within=10km&start_date.range_start=${new Date().toISOString().split('T')[0]}T00:00:00Z&token=${EVENTBRITE_TOKEN}`;
@@ -76,7 +91,10 @@ async function fetchEventbrite(): Promise<Experience[]> {
     const data = await res.json();
     if (!data.events) return [];
 
-    return data.events.slice(0, 4).map((event: any, i: number): Experience => ({
+    return data.events
+      .filter((event: any) => matchesDateWindow(event, dateWindow))
+      .slice(0, 4)
+      .map((event: any, i: number): Experience => ({
       id: `eventbrite-${event.id || i}`,
       title: event.name.text,
       description: event.summary || 'Live event in Madrid via Eventbrite.',
@@ -98,7 +116,7 @@ async function fetchEventbrite(): Promise<Experience[]> {
   }
 }
 
-async function fetchTicketmaster(): Promise<Experience[]> {
+async function fetchTicketmaster(dateWindow: DateWindow): Promise<Experience[]> {
   if (!TICKETMASTER_KEY) return [];
 
   const url = `https://app.ticketmaster.com/discovery/v2/events.json?city=Madrid&countryCode=ES&apikey=${TICKETMASTER_KEY}`;
@@ -109,7 +127,10 @@ async function fetchTicketmaster(): Promise<Experience[]> {
     const data = await res.json();
     const events = data._embedded?.events || [];
 
-    return events.slice(0, 4).map((event: any, i: number): Experience => ({
+    return events
+      .filter((event: any) => matchesDateWindow(event, dateWindow))
+      .slice(0, 4)
+      .map((event: any, i: number): Experience => ({
       id: `ticketmaster-${event.id || i}`,
       title: event.name,
       description: `Live show or concert in Madrid via Ticketmaster.`,
@@ -132,6 +153,53 @@ async function fetchTicketmaster(): Promise<Experience[]> {
   }
 }
 
+type DateWindow = 'day' | 'weekend' | 'month' | 'any';
+
+function getDateWindowBounds(window: DateWindow): { start: Date; end: Date } | null {
+  if (window === 'any') return null;
+
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+
+  if (window === 'day') {
+    end.setHours(23, 59, 59, 999);
+  } else if (window === 'weekend') {
+    const day = start.getDay();
+    const daysUntilFriday = day >= 5 ? 0 : 5 - day;
+    start.setDate(start.getDate() + daysUntilFriday);
+    end.setTime(start.getTime());
+    end.setDate(start.getDate() + (7 - start.getDay()) % 7);
+    end.setHours(23, 59, 59, 999);
+  } else if (window === 'month') {
+    end.setDate(start.getDate() + 30);
+    end.setHours(23, 59, 59, 999);
+  }
+
+  return { start, end };
+}
+
+function parseEventDate(event: any): Date | null {
+  const raw =
+    event.dates?.start?.dateTime ||
+    event.dates?.start?.localDate ||
+    event.start?.local ||
+    event.start?.utc;
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function matchesDateWindow(event: any, window: DateWindow): boolean {
+  if (window === 'any') return true;
+  const bounds = getDateWindowBounds(window);
+  if (!bounds) return true;
+  const eventDate = parseEventDate(event);
+  if (!eventDate) return false;
+  return eventDate >= bounds.start && eventDate <= bounds.end;
+}
+
 function distanceToIE(lat: number, lng: number): number {
   const IE_LAT = 40.4168;
   const IE_LNG = -3.7038;
@@ -150,9 +218,9 @@ function distanceToIE(lat: number, lng: number): number {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const typesParam = searchParams.get('types') || 'food,nightlife,culture,adventure,wellness';
+  const typesParam = searchParams.get('types') || 'food,nightlife,culture,adventure,wellness,sports,concerts';
   const requestedTypes = typesParam.split(',').map((t) => t.trim()).filter(Boolean);
-  const validTypes: ExperienceType[] = ['food', 'nightlife', 'culture', 'adventure', 'wellness'];
+  const validTypes: ExperienceType[] = ['food', 'nightlife', 'culture', 'adventure', 'wellness', 'sports', 'concerts'];
   const invalid = requestedTypes.filter((t) => !validTypes.includes(t as ExperienceType));
   if (invalid.length > 0) {
     return NextResponse.json(
@@ -162,6 +230,11 @@ export async function GET(request: NextRequest) {
   }
   const types = requestedTypes as ExperienceType[];
 
+  const dateWindowParam = searchParams.get('dateWindow') || 'any';
+  const dateWindow: DateWindow = ['day', 'weekend', 'month'].includes(dateWindowParam)
+    ? (dateWindowParam as DateWindow)
+    : 'any';
+
   const liveResults: Experience[] = [];
 
   for (const type of types) {
@@ -169,8 +242,8 @@ export async function GET(request: NextRequest) {
     liveResults.push(...places);
   }
 
-  liveResults.push(...(await fetchEventbrite()));
-  liveResults.push(...(await fetchTicketmaster()));
+  liveResults.push(...(await fetchEventbrite(dateWindow)));
+  liveResults.push(...(await fetchTicketmaster(dateWindow)));
 
   const all = [...curatedExperiences, ...liveResults];
 
