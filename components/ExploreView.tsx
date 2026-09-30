@@ -9,12 +9,7 @@ import {
   DareLevel,
   WeatherCondition,
 } from "@/lib/types";
-import {
-  typeLabels,
-  budgetLabels,
-  dareLabels,
-  vibeLabels,
-} from "@/data/experiences";
+import { typeLabels, budgetLabels, vibeLabels } from "@/data/experiences";
 import {
   MapPin,
   Wallet,
@@ -177,42 +172,51 @@ export default function ExploreView({
 
   const btnClass = buttonStyles[currentLevel] || buttonStyles[2];
 
+  const customLevelNames: Record<number, string> = {
+    1: "Tame",
+    2: "IE Appropriate",
+    3: "Todos Santos",
+    4: "Enter the Matrix",
+    5: "You Gone",
+  };
+
   const contentByLevel: Record<
     number,
     { title: string; subtitle: string; btnText: string; warningText: string }
   > = {
     1: {
-      title: "Gentle Curiosity",
+      title: "Tame Exploration",
       subtitle: "A quiet, comfortable push outside your daily routine.",
       btnText: "Surprise Me",
       warningText:
         "No experiences match your filters. Try widening your budget or distance.",
     },
     2: {
-      title: "Ready for a surprise?",
+      title: "IE Appropriate",
       subtitle:
-        "Set your filters and let Freakend pick a Madrid experience you might never choose yourself.",
+        "Structured networking and polished Madrid outings suitable for the cohort.",
       btnText: "Surprise Me",
       warningText:
         "No experiences match your filters. Try widening your budget, distance, or freak-o-meter level.",
     },
     3: {
-      title: "⚡ DROP THE BEAT ⚡",
-      subtitle: "Amplified nightlife and high-energy pulses across the city.",
+      title: "Back Home at 5AM",
+      subtitle:
+        "High energy, late nights, and vibrant social immersion across the city.",
       btnText: "Drop Surprise",
       warningText: "⚡ NO FREAKEND MATCHES FOUND. ADJUST YOUR FILTERS ⚡",
     },
     4: {
-      title: "Precision Grid",
+      title: "Enter the Matrix",
       subtitle:
-        "Structured exploration parameters tuned for optimal discovery in Madrid.",
+        "Deep exploration parameters tuned for clandestine discovery in Madrid.",
       btnText: "Generate Route",
       warningText:
         "No matches found within current parameters. Adjust range or budget filters.",
     },
     5: {
-      title: ">>> ENTER THE VOID <<<",
-      subtitle: "LET THE ALGORITHM DISSOLVE YOUR REALITY IN MADRID.",
+      title: "A New Realm",
+      subtitle: "TOTAL REALITY DISSOLUTION. UNKNOWN TERRITORY AWAITS.",
       btnText: "⚡ BREAK REALITY ⚡",
       warningText:
         "⚠️ REALITY COLLISION ERROR: ZERO EXPERIENCES FOUND IN THIS DIMENSION. EXPAND YOUR PARAMETERS ⚠️",
@@ -435,8 +439,7 @@ export default function ExploreView({
                   <span
                     className={`text-xs font-bold px-2.5 py-0.5 ${activeTabClass}`}
                   >
-                    LEVEL {currentLevel}:{" "}
-                    {dareLabels[currentLevel as DareLevel]}
+                    L{currentLevel}: {customLevelNames[currentLevel]}
                   </span>
                 </div>
                 <input
