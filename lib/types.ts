@@ -40,6 +40,9 @@ export interface CompletedExperience {
   type: ExperienceType;
   budget: Budget;
   vibe: Vibe;
+  caption?: string;
+  photoUrl?: string;
+  sharedWith?: string[];
 }
 
 export interface UserProfile {
@@ -52,6 +55,18 @@ export interface UserProfile {
   lastCompletedDate: string | null;
   completed: CompletedExperience[];
   badges: string[];
+  friends: string[];
+  avatarEmoji?: string;
+}
+
+export interface FriendProfile {
+  name: string;
+  email: string;
+  cohort: string;
+  points: number;
+  level: number;
+  avatarEmoji: string;
+  completed: CompletedExperience[];
 }
 
 export interface LeaderboardUser {

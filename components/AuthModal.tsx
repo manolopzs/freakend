@@ -38,6 +38,8 @@ export default function AuthModal({ onLogin }: Props) {
       lastCompletedDate: null,
       completed: [],
       badges: [],
+      friends: [],
+      avatarEmoji: '🙂',
     });
   };
 

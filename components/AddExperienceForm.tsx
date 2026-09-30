@@ -1,0 +1,183 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Experience, FriendProfile } from '@/lib/types';
+import { Star, Camera, Send, Users } from 'lucide-react';
+
+interface Props {
+  experiences: Experience[];
+  prefilledExperienceId?: string | null;
+  friends: FriendProfile[];
+  onLog: (experienceId: string, rating: number, caption: string, photoUrl: string | undefined, sharedWith: string[]) => void;
+}
+
+export default function AddExperienceForm({ experiences, prefilledExperienceId, friends, onLog }: Props) {
+  const [experienceId, setExperienceId] = useState(prefilledExperienceId || '');
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [caption, setCaption] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+  const [sharedWith, setSharedWith] = useState<string[]>(friends.map((f) => f.email));
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (prefilledExperienceId) setExperienceId(prefilledExperienceId);
+  }, [prefilledExperienceId]);
+
+  const selectedExperience = experiences.find((e) => e.id === experienceId);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoUrl(reader.result as string);
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleFriend = (email: string) => {
+    setSharedWith((prev) => (prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!experienceId || rating < 1) return;
+    onLog(experienceId, rating, caption.trim(), photoUrl, sharedWith);
+    setExperienceId('');
+    setRating(0);
+    setCaption('');
+    setPhotoUrl(undefined);
+    setSharedWith(friends.map((f) => f.email));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="comic-panel p-5 space-y-6">
+      <h3 className="comic-text text-xl flex items-center gap-2 gradient-text">
+        <Camera className="w-5 h-5 text-freak-pink" />
+        Log a Freakend
+      </h3>
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 block">Experience</label>
+        <select
+          value={experienceId}
+          onChange={(e) => setExperienceId(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white focus:border-freak-pink focus:ring-2 focus:ring-freak-pink/30 outline-none appearance-none"
+        >
+          <option value="" className="bg-freak-panel">Pick an experience…</option>
+          {experiences.map((exp) => (
+            <option key={exp.id} value={exp.id} className="bg-freak-panel">
+              {exp.emoji} {exp.title}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedExperience && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3">
+          <div className="text-3xl">{selectedExperience.emoji}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-black text-sm text-white truncate">{selectedExperience.title}</div>
+            <div className="text-[10px] text-white/50 font-bold uppercase">{selectedExperience.neighborhood}</div>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 block">Rating</label>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onMouseEnter={() => setHoverRating(star)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => setRating(star)}
+              className="p-1 transition-transform hover:scale-110"
+            >
+              <Star
+                className={`w-8 h-8 ${
+                  star <= (hoverRating || rating) ? 'text-freak-yellow fill-freak-yellow' : 'text-white/20'
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 block">Caption</label>
+        <textarea
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="What made it memorable?"
+          rows={3}
+          className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/30 focus:border-freak-cyan focus:ring-2 focus:ring-freak-cyan/30 outline-none resize-none"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 block">Photo</label>
+        <div className="relative">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="w-full text-sm text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-freak-pink file:text-white file:font-black file:uppercase file:text-xs hover:file:bg-freak-pink-glow"
+          />
+          {isUploading && <span className="text-xs text-freak-cyan mt-2 block">Uploading…</span>}
+        </div>
+        {photoUrl && (
+          <div className="mt-3 relative h-40 rounded-xl overflow-hidden border border-white/10">
+            <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="text-xs font-black text-white/80 uppercase tracking-wider mb-2 flex items-center gap-2">
+          <Users className="w-4 h-4 text-freak-cyan" />
+          Share with
+        </label>
+        {friends.length === 0 ? (
+          <p className="text-sm text-white/50">No friends yet. Add friends in your profile to share.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {friends.map((friend) => {
+              const selected = sharedWith.includes(friend.email);
+              return (
+                <button
+                  key={friend.email}
+                  type="button"
+                  onClick={() => toggleFriend(friend.email)}
+                  className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                    selected
+                      ? 'bg-freak-cyan text-freak-bg border-freak-cyan shadow-neon-cyan'
+                      : 'bg-white/5 text-white/70 border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  {friend.avatarEmoji} {friend.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="submit"
+        disabled={!experienceId || rating < 1}
+        className="group relative w-full py-3 rounded-xl font-black uppercase tracking-wider text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-freak-pink via-freak-purple to-freak-cyan" />
+        <span className="absolute inset-[2px] rounded-xl bg-freak-panel transition-all group-hover:inset-[1px]" />
+        <span className="relative flex items-center justify-center gap-2">
+          Post to feed <Send className="w-4 h-4 text-freak-yellow" />
+        </span>
+      </button>
+    </form>
+  );
+}

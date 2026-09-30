@@ -3,22 +3,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Experience, Filters, UserProfile } from '@/lib/types';
 import { curatedExperiences } from '@/data/experiences';
-import { loadFilters, loadProfile, saveFilters, saveProfile, getDefaultProfile } from '@/lib/storage';
+import { loadFilters, loadProfile, saveFilters, saveProfile, loadAllProfiles, getDefaultProfile } from '@/lib/storage';
 import { calculatePoints, updateStreak, computeLevel, checkNewBadges, BADGES } from '@/lib/gamification';
-import ProfileHeader from '@/components/ProfileHeader';
-import FilterPanel from '@/components/FilterPanel';
-import SurpriseCard from '@/components/SurpriseCard';
-import BadgeGrid from '@/components/BadgeGrid';
-import CompletedList from '@/components/CompletedList';
+import BottomNav, { Tab } from '@/components/BottomNav';
+import FeedView from '@/components/FeedView';
+import ExploreView from '@/components/ExploreView';
+import AddExperienceForm from '@/components/AddExperienceForm';
+import ProfileView from '@/components/ProfileView';
 import NewBadgeToast from '@/components/NewBadgeToast';
 import AuthModal from '@/components/AuthModal';
-import Leaderboard from '@/components/Leaderboard';
-import { Sparkles, LogOut, Globe, Crown } from 'lucide-react';
+import { Sparkles, LogOut, Crown } from 'lucide-react';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [filters, setFilters] = useState<Filters | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
+  const [prefilledExperienceId, setPrefilledExperienceId] = useState<string | null>(null);
   const [surprise, setSurprise] = useState<Experience | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newBadges, setNewBadges] = useState<string[]>([]);
@@ -74,6 +75,9 @@ export default function Home() {
     });
   }, [filters, experiences]);
 
+  const allProfiles = useMemo(() => (profile ? loadAllProfiles(profile) : []), [profile]);
+  const friendProfiles = useMemo(() => allProfiles.filter((p) => p.email !== (profile?.email || 'me')), [allProfiles, profile]);
+
   const generateSurprise = () => {
     if (!filters || filteredExperiences.length === 0) return;
     setIsGenerating(true);
@@ -88,21 +92,38 @@ export default function Home() {
 
   const acceptDare = () => {
     if (!surprise || !profile) return;
+    logExperienceInternal(surprise.id, 0, '', undefined, []);
+    setSurprise(null);
+  };
+
+  const logExperienceInternal = (
+    experienceId: string,
+    rating: number,
+    caption: string,
+    photoUrl: string | undefined,
+    sharedWith: string[]
+  ) => {
+    if (!profile) return;
+    const experience = experiences.find((e) => e.id === experienceId);
+    if (!experience) return;
 
     const streak = updateStreak(profile);
-    const pointsEarned = calculatePoints(surprise, streak);
+    const pointsEarned = calculatePoints(experience, streak);
     const completedAt = new Date().toISOString();
 
     const nextCompleted = [
       ...profile.completed,
       {
-        id: surprise.id,
+        id: experience.id,
         completedAt,
-        rating: 0,
-        dareLevel: surprise.dareLevel,
-        type: surprise.type,
-        budget: surprise.budget,
-        vibe: surprise.vibe,
+        rating,
+        dareLevel: experience.dareLevel,
+        type: experience.type,
+        budget: experience.budget,
+        vibe: experience.vibe,
+        caption,
+        photoUrl,
+        sharedWith,
       },
     ];
 
@@ -123,6 +144,23 @@ export default function Home() {
     }
 
     setProfile(nextProfile);
+  };
+
+  const handleLogExperience = (
+    experienceId: string,
+    rating: number,
+    caption: string,
+    photoUrl: string | undefined,
+    sharedWith: string[]
+  ) => {
+    logExperienceInternal(experienceId, rating, caption, photoUrl, sharedWith);
+    setPrefilledExperienceId(null);
+    setActiveTab('feed');
+  };
+
+  const handleLogFromSurprise = (experience: Experience) => {
+    setPrefilledExperienceId(experience.id);
+    setActiveTab('add');
     setSurprise(null);
   };
 
@@ -140,9 +178,24 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    setProfile(getDefaultProfile());
+    const fresh = getDefaultProfile();
+    setProfile(fresh);
     setSurprise(null);
-    saveProfile(getDefaultProfile());
+    setActiveTab('feed');
+    saveProfile(fresh);
+  };
+
+  const handleAddFriend = (email: string) => {
+    if (!profile || email === profile.email) return;
+    if (profile.friends.includes(email)) return;
+    const next = { ...profile, friends: [...profile.friends, email] };
+    setProfile(next);
+  };
+
+  const handleRemoveFriend = (email: string) => {
+    if (!profile) return;
+    const next = { ...profile, friends: profile.friends.filter((e) => e !== email) };
+    setProfile(next);
   };
 
   if (!mounted || !profile || !filters) {
@@ -164,7 +217,9 @@ export default function Home() {
   const badge = currentBadge ? BADGES.find((b) => b.id === currentBadge) : undefined;
 
   return (
-    <main className="min-h-screen bg-freak-bg">
+    <main className="min-h-screen bg-freak-bg md:ml-20 pb-20 md:pb-0">
+      <BottomNav active={activeTab} onChange={setActiveTab} />
+
       <header className="sticky top-0 z-30 border-b border-white/10 bg-freak-bg/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -180,15 +235,7 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            {liveMeta && liveMeta.liveCount > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-freak-cyan bg-freak-cyan/10 border border-freak-cyan/30 px-2.5 py-1 rounded-full">
-                <Globe className="w-3 h-3" />
-                {liveMeta.liveCount} LIVE
-              </div>
-            )}
-            <div className="text-sm font-black text-freak-yellow neon-text-yellow">
-              {profile.points} PTS
-            </div>
+            <div className="text-sm font-black text-freak-yellow neon-text-yellow">{profile.points} PTS</div>
             {isLoggedIn && (
               <button
                 onClick={handleLogout}
@@ -201,41 +248,46 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <ProfileHeader profile={profile} />
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {activeTab === 'feed' && (
+          <FeedView profiles={allProfiles} experiences={experiences} currentUserEmail={profile.email} />
+        )}
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          <div className="lg:col-span-2 space-y-6">
-            <FilterPanel filters={filters} onChange={setFilters} />
-            {loadingLive && (
-              <div className="text-xs font-bold text-freak-cyan flex items-center gap-2">
-                <Sparkles className="w-3 h-3 animate-spin" /> SCANNING LIVE EVENTS...
-              </div>
-            )}
-            <Leaderboard profile={profile} />
-            <BadgeGrid profile={profile} />
-          </div>
+        {activeTab === 'explore' && (
+          <ExploreView
+            filters={filters}
+            onFiltersChange={setFilters}
+            experiences={experiences}
+            surprise={surprise}
+            isGenerating={isGenerating}
+            hasMatches={filteredExperiences.length > 0}
+            liveMeta={liveMeta}
+            loadingLive={loadingLive}
+            onGenerate={generateSurprise}
+            onAccept={acceptDare}
+            onSkip={skipDare}
+            onLogExperience={handleLogFromSurprise}
+          />
+        )}
 
-          <div className="lg:col-span-3 space-y-6">
-            <SurpriseCard
-              experience={surprise}
-              isGenerating={isGenerating}
-              hasMatches={filteredExperiences.length > 0}
-              onGenerate={generateSurprise}
-              onAccept={acceptDare}
-              onSkip={skipDare}
-            />
+        {activeTab === 'add' && (
+          <AddExperienceForm
+            experiences={experiences}
+            prefilledExperienceId={prefilledExperienceId}
+            friends={friendProfiles}
+            onLog={handleLogExperience}
+          />
+        )}
 
-            {filteredExperiences.length === 0 && (
-              <div className="comic-panel border-l-4 border-l-freak-yellow p-4 text-sm text-white/90">
-                <span className="font-black text-freak-yellow uppercase">No matches!</span>{' '}
-                Loosen your filters to unlock a dare.
-              </div>
-            )}
-
-            <CompletedList profile={profile} experiences={experiences} />
-          </div>
-        </div>
+        {activeTab === 'profile' && (
+          <ProfileView
+            profile={profile}
+            experiences={experiences}
+            friendProfiles={friendProfiles}
+            onAddFriend={handleAddFriend}
+            onRemoveFriend={handleRemoveFriend}
+          />
+        )}
       </div>
 
       {badge && <NewBadgeToast badge={badge} onClose={dismissBadge} />}

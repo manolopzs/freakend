@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Experience } from '@/lib/types';
 import { budgetLabels, dareLabels } from '@/data/experiences';
-import { MapPin, Wallet, Zap, Users, RefreshCw, Check, X, Share2, ExternalLink } from 'lucide-react';
+import { MapPin, Wallet, Zap, Users, RefreshCw, Check, X, Share2, ExternalLink, PenLine } from 'lucide-react';
 
 interface Props {
   experience: Experience | null;
@@ -12,9 +12,10 @@ interface Props {
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
+  onLogExperience?: (experience: Experience) => void;
 }
 
-export default function SurpriseCard({ experience, isGenerating, hasMatches, onGenerate, onAccept, onSkip }: Props) {
+export default function SurpriseCard({ experience, isGenerating, hasMatches, onGenerate, onAccept, onSkip, onLogExperience }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [leverPulling, setLeverPulling] = useState(false);
 
@@ -161,7 +162,7 @@ export default function SurpriseCard({ experience, isGenerating, hasMatches, onG
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <button
             onClick={handleGenerate}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/20 text-white hover:bg-white/10 font-black uppercase text-xs transition-colors"
@@ -182,6 +183,14 @@ export default function SurpriseCard({ experience, isGenerating, hasMatches, onG
           >
             <Share2 className="w-4 h-4" /> WhatsApp
           </a>
+          {onLogExperience && (
+            <button
+              onClick={() => experience && onLogExperience(experience)}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-freak-purple hover:bg-freak-violet text-white font-black uppercase text-xs transition-colors shadow-neon-purple"
+            >
+              <PenLine className="w-4 h-4" /> Log
+            </button>
+          )}
           <button
             onClick={onAccept}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-freak-pink hover:bg-freak-pink-glow text-white font-black uppercase text-xs transition-colors shadow-neon-pink"
