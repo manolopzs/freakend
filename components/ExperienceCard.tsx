@@ -23,7 +23,7 @@ export default function ExperienceCard({
   className = '',
 }: Props) {
   return (
-    <div className={`comic-card flex-shrink-0 w-72 overflow-hidden group ${className}`}>
+    <div className={`comic-card flex-shrink-0 w-72 overflow-hidden group snap-start ${className}`}>
       <div className="relative h-36 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
         {experience.photoUrl ? (
           <img
@@ -33,9 +33,9 @@ export default function ExperienceCard({
           />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-freak-bg/90 via-transparent to-transparent" />
-        <div className="relative z-10 text-center px-4">
+        <div className="relative z-10 text-center px-4 w-full max-w-full min-w-0">
           <div className="text-4xl mb-1 drop-shadow-[0_0_12px_rgba(255,0,170,0.5)]">{experience.emoji}</div>
-          <h3 className="comic-text text-base text-white truncate">{experience.title}</h3>
+          <h3 className="comic-text text-sm sm:text-base text-white line-clamp-2 break-words">{experience.title}</h3>
         </div>
         <div className="absolute top-2 right-2 flex gap-1.5">
           {showActions && onToggleSave && (
@@ -68,10 +68,10 @@ export default function ExperienceCard({
         <p className="text-white/70 text-xs line-clamp-2 mb-3 leading-relaxed">{experience.description}</p>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
-          <span className="px-2 py-0.5 rounded-full bg-freak-pink/10 border border-freak-pink/40 text-freak-pink text-[9px] font-black uppercase">
+          <span className="px-2 py-0.5 rounded-full bg-freak-pink/10 border border-freak-pink/40 text-freak-pink text-[9px] font-black uppercase truncate max-w-[45%]">
             {experience.type}
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-freak-cyan/10 border border-freak-cyan/40 text-freak-cyan text-[9px] font-black uppercase">
+          <span className="px-2 py-0.5 rounded-full bg-freak-cyan/10 border border-freak-cyan/40 text-freak-cyan text-[9px] font-black uppercase truncate max-w-[45%]">
             {experience.vibe}
           </span>
           <span className="px-2 py-0.5 rounded-full bg-freak-purple/10 border border-freak-purple/40 text-freak-purple text-[9px] font-black uppercase">

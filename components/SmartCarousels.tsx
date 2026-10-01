@@ -63,7 +63,7 @@ function CarouselSection({ title, icon, experiences, currentProfile, onToggleSav
       ) : (
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+          className="flex gap-4 overflow-x-auto pb-3 px-1 -mx-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
           style={{ scrollbarWidth: 'thin' }}
         >
           {experiences.map((exp) => (

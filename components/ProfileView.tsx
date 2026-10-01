@@ -90,13 +90,13 @@ export default function ProfileView({
               return (
                 <div
                   key={email}
-                  className="flex items-center gap-2 pl-3 pr-1 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-black uppercase tracking-wider"
+                  className="flex items-center gap-2 pl-3 pr-1 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-black uppercase tracking-wider min-w-0 max-w-full"
                 >
-                  <span className="text-base">{friend?.avatarEmoji || '👤'}</span>
-                  <span className="text-white/90">{friend?.name || email}</span>
+                  <span className="text-base shrink-0">{friend?.avatarEmoji || '👤'}</span>
+                  <span className="text-white/90 truncate">{friend?.name || email}</span>
                   <button
                     onClick={() => onRemoveFriend(email)}
-                    className="ml-1 p-1 rounded-full hover:bg-white/10 text-white/40 hover:text-freak-pink transition-colors"
+                    className="ml-1 p-1 rounded-full hover:bg-white/10 text-white/40 hover:text-freak-pink transition-colors shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -167,10 +167,10 @@ export default function ProfileView({
                         </div>
                       )}
                       <div className="p-3">
-                        <div className="font-black text-sm text-white truncate uppercase tracking-wide">{exp.title}</div>
-                        <div className="flex items-center gap-2 text-[10px] text-white/50 mt-1">
-                          <MapPin className="w-3 h-3 text-freak-cyan" /> {exp.neighborhood}
-                          <Calendar className="w-3 h-3 ml-1" /> {new Date(c.completedAt).toLocaleDateString()}
+                        <div className="font-black text-sm text-white line-clamp-2 uppercase tracking-wide break-words">{exp.title}</div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/50 mt-1">
+                          <span className="truncate max-w-[50%] flex items-center gap-1"><MapPin className="w-3 h-3 text-freak-cyan shrink-0" /> {exp.neighborhood}</span>
+                          <span className="flex items-center gap-1 shrink-0"><Calendar className="w-3 h-3" /> {new Date(c.completedAt).toLocaleDateString()}</span>
                         </div>
                         {c.rating > 0 && (
                           <div className="flex items-center gap-0.5 mt-2">
@@ -202,7 +202,7 @@ export default function ProfileView({
             {savedExperiences.length === 0 ? (
               <p className="text-sm text-white/50">No saved experiences yet. Bookmark ones you want to try later.</p>
             ) : (
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {savedExperiences.map((exp) => (
                   <ExperienceCard
                     key={exp.id}

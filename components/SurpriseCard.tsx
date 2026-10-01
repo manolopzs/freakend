@@ -110,9 +110,9 @@ export default function SurpriseCard({
           />
         ) : null}
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-freak-bg/90 via-transparent to-transparent" />
-        <div className={`relative z-10 text-center p-6 transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`relative z-10 text-center p-6 w-full max-w-full min-w-0 transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0'}`}>
           <div className="text-6xl mb-2 drop-shadow-[0_0_18px_rgba(255,0,170,0.5)] animate-float">{experience.emoji}</div>
-          <h3 className="comic-text text-2xl sm:text-3xl mb-1 drop-shadow-lg text-white">{experience.title}</h3>
+          <h3 className="comic-text text-xl sm:text-2xl md:text-3xl mb-1 drop-shadow-lg text-white line-clamp-3 break-words">{experience.title}</h3>
           <p className="text-freak-cyan font-bold text-sm uppercase tracking-wider">{experience.neighborhood}</p>
         </div>
         <div className="absolute top-3 right-3 w-10 h-10 bg-freak-yellow starburst flex items-center justify-center animate-star-spin">
@@ -199,7 +199,7 @@ export default function SurpriseCard({
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <button
             onClick={handleGenerate}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/20 text-white hover:bg-white/10 font-black uppercase text-xs transition-colors"

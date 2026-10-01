@@ -43,12 +43,10 @@ export default function CompletedList({ profile, experiences }: Props) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-black text-sm text-white truncate uppercase tracking-wide">{exp.title}</div>
-                <div className="flex items-center gap-2 text-xs text-white/50 mt-1 flex-wrap">
-                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-freak-cyan" /> {exp.neighborhood}</span>
-                  <span className="text-white/20">·</span>
+                <div className="font-black text-sm text-white line-clamp-2 uppercase tracking-wide break-words">{exp.title}</div>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 mt-1">
+                  <span className="truncate max-w-[50%] flex items-center gap-1"><MapPin className="w-3 h-3 text-freak-cyan shrink-0" /> {exp.neighborhood}</span>
                   <span className="text-freak-yellow">{budgetLabels[exp.budget]}</span>
-                  <span className="text-white/20">·</span>
                   <span className="text-freak-purple">{dareLabels[exp.dareLevel]}</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-white/40 mt-1">

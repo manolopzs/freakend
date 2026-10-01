@@ -382,9 +382,9 @@ export default function Home() {
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-freak-yellow rounded-full animate-pulse" />
             </div>
-            <div>
-              <h1 className="comic-text text-2xl leading-none gradient-text">FREAKEND</h1>
-              <p className="text-[10px] text-freak-cyan font-bold tracking-widest uppercase">One pull away from a story.</p>
+            <div className="min-w-0">
+              <h1 className="comic-text text-xl sm:text-2xl leading-none gradient-text">FREAKEND</h1>
+              <p className="text-[10px] text-freak-cyan font-bold tracking-widest uppercase truncate">One pull away from a story.</p>
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">

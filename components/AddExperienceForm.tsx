@@ -157,10 +157,10 @@ export default function AddExperienceForm({ experiences, prefilledExperienceId, 
 
       {selectedExperience && (
         <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3">
-          <div className="text-3xl">{selectedExperience.emoji}</div>
+          <div className="text-3xl shrink-0">{selectedExperience.emoji}</div>
           <div className="flex-1 min-w-0">
-            <div className="font-black text-sm text-white truncate">{selectedExperience.title}</div>
-            <div className="text-[10px] text-white/50 font-bold uppercase">{selectedExperience.neighborhood}</div>
+            <div className="font-black text-sm text-white line-clamp-2 break-words">{selectedExperience.title}</div>
+            <div className="text-[10px] text-white/50 font-bold uppercase truncate">{selectedExperience.neighborhood}</div>
           </div>
         </div>
       )}
@@ -258,13 +258,13 @@ export default function AddExperienceForm({ experiences, prefilledExperienceId, 
                   key={friend.email}
                   type="button"
                   onClick={() => toggleFriend(friend.email)}
-                  className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                  className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all min-w-0 max-w-full ${
                     selected
                       ? 'bg-freak-cyan text-freak-bg border-freak-cyan shadow-neon-cyan'
                       : 'bg-white/5 text-white/70 border-white/10 hover:border-white/30'
                   }`}
                 >
-                  {friend.avatarEmoji} {friend.name}
+                  <span className="truncate">{friend.avatarEmoji} {friend.name}</span>
                 </button>
               );
             })}

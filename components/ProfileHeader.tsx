@@ -18,9 +18,9 @@ export default function ProfileHeader({ profile }: Props) {
 
       <div className="relative z-10 p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="comic-text text-2xl sm:text-3xl text-white">{profile.name}</h2>
-            <p className="text-freak-cyan text-xs font-black uppercase tracking-wider">
+          <div className="min-w-0 flex-1 mr-3">
+            <h2 className="comic-text text-2xl sm:text-3xl text-white truncate">{profile.name}</h2>
+            <p className="text-freak-cyan text-xs font-black uppercase tracking-wider truncate">
               {profile.cohort} · {current.name} · Level {current.level}
             </p>
           </div>

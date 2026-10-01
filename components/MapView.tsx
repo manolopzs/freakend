@@ -75,11 +75,11 @@ export default function MapView({ experiences, currentProfile, onToggleSave, onW
                     <div className="w-12 h-12 rounded-full bg-freak-panel border-2 border-freak-cyan flex items-center justify-center text-2xl shadow-neon-cyan">
                       {zone.pin}
                     </div>
-                    <div>
-                      <h3 className="comic-text text-lg text-white">{zone.neighborhood}</h3>
+                    <div className="min-w-0">
+                      <h3 className="comic-text text-base sm:text-lg text-white truncate">{zone.neighborhood}</h3>
                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-white/50">
-                        <Navigation className="w-3 h-3 text-freak-cyan" />
-                        {zone.avgDistance.toFixed(1)} km avg
+                        <Navigation className="w-3 h-3 text-freak-cyan shrink-0" />
+                        <span className="truncate">{zone.avgDistance.toFixed(1)} km avg</span>
                       </div>
                     </div>
                   </div>
@@ -112,16 +112,14 @@ export default function MapView({ experiences, currentProfile, onToggleSave, onW
                       >
                         <div className="text-2xl">{exp.emoji}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-black text-sm text-white truncate">{exp.title}</div>
-                          <div className="flex items-center gap-2 text-[10px] text-white/50 font-black uppercase tracking-wider">
-                            <span>{exp.type}</span>
-                            <span>·</span>
+                          <div className="font-black text-sm text-white line-clamp-2 break-words">{exp.title}</div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/50 font-black uppercase tracking-wider">
+                            <span className="truncate max-w-[45%]">{exp.type}</span>
                             <span>{exp.distanceKm} km</span>
-                            <span>·</span>
                             <span>{'€'.repeat(exp.budget)}</span>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           {onToggleSave && (
                             <button
                               onClick={() => onToggleSave(exp)}

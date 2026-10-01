@@ -112,25 +112,25 @@ export default function FeedView({
               <div className="relative h-56 sm:h-72 bg-black">
                 <img src={imageUrl} alt={exp?.title || 'Experience'} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-freak-bg/80 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-4 right-4">
-                  <h3 className="comic-text text-xl sm:text-2xl text-white drop-shadow-lg">{exp?.title}</h3>
-                  <p className="text-freak-cyan text-xs font-black uppercase tracking-wider">{exp?.neighborhood}</p>
+                <div className="absolute bottom-3 left-4 right-4 max-w-full min-w-0">
+                  <h3 className="comic-text text-lg sm:text-xl md:text-2xl text-white drop-shadow-lg line-clamp-2 break-words">{exp?.title}</h3>
+                  <p className="text-freak-cyan text-xs font-black uppercase tracking-wider truncate">{exp?.neighborhood}</p>
                 </div>
               </div>
             ) : (
               <div className="relative h-40 sm:h-48 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
                 <div className="absolute inset-0 halftone-bg opacity-30" />
-                <div className="text-center z-10">
+                <div className="text-center z-10 px-4 w-full max-w-full min-w-0">
                   <div className="text-5xl mb-2 animate-float">{exp?.emoji}</div>
-                  <h3 className="comic-text text-xl text-white">{exp?.title}</h3>
-                  <p className="text-freak-cyan text-xs font-black uppercase tracking-wider">{exp?.neighborhood}</p>
+                  <h3 className="comic-text text-lg sm:text-xl text-white line-clamp-2 break-words">{exp?.title}</h3>
+                  <p className="text-freak-cyan text-xs font-black uppercase tracking-wider truncate">{exp?.neighborhood}</p>
                 </div>
               </div>
             )}
 
             <div className="p-4">
               {item.completed.rating > 0 && (
-                <div className="flex flex-wrap items-center gap-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                   {ratingStars(item.completed.rating)}
                   {item.completed.vibeRating ? ratingStars(item.completed.vibeRating) : null}
                   {item.completed.valueRating ? ratingStars(item.completed.valueRating) : null}
@@ -143,7 +143,7 @@ export default function FeedView({
                   {item.completed.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-1 rounded-full bg-freak-purple/10 border border-freak-purple/40 text-freak-purple text-[10px] font-black uppercase tracking-wider"
+                      className="px-2 py-1 rounded-full bg-freak-purple/10 border border-freak-purple/40 text-freak-purple text-[10px] font-black uppercase tracking-wider truncate max-w-[120px]"
                     >
                       {tag.replace(/-/g, ' ')}
                     </span>
@@ -162,8 +162,8 @@ export default function FeedView({
               )}
 
               <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider text-white/50 mb-3">
-                <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">{exp?.type}</span>
-                <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10">{exp?.vibe}</span>
+                <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 truncate max-w-[45%]">{exp?.type}</span>
+                <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 truncate max-w-[45%]">{exp?.vibe}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">

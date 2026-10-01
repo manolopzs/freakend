@@ -60,14 +60,15 @@ export default function PlansView({
                     <img src={exp.photoUrl} alt={exp.title} className="absolute inset-0 w-full h-full object-cover opacity-60" />
                   ) : null}
                   <div className="absolute inset-0 bg-gradient-to-t from-freak-bg/90 via-transparent to-transparent" />
-                  <div className="relative z-10 text-center px-4">
+                  <div className="relative z-10 text-center px-4 w-full max-w-full min-w-0">
                     <div className="text-3xl mb-1">{exp.emoji}</div>
-                    <h4 className="comic-text text-base text-white truncate">{exp.title}</h4>
+                    <h4 className="comic-text text-sm sm:text-base text-white line-clamp-2 break-words">{exp.title}</h4>
                   </div>
                 </div>
                 <div className="p-4">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-freak-cyan mb-2">
-                    <MapPin className="w-3 h-3" /> {exp.neighborhood} · {exp.distanceKm} km
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-black uppercase tracking-wider text-freak-cyan mb-2">
+                    <span className="truncate max-w-[70%] flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /> {exp.neighborhood}</span>
+                    <span>{exp.distanceKm} km</span>
                   </div>
                   <p className="text-white/70 text-xs line-clamp-2 mb-3">{exp.description}</p>
 
@@ -79,10 +80,10 @@ export default function PlansView({
                       {attendees.map((a) => (
                         <span
                           key={a.email}
-                          className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase"
+                          className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase min-w-0 max-w-full"
                         >
-                          <span>{a.avatarEmoji}</span>
-                          <span className="text-white/80">{a.name}</span>
+                          <span className="shrink-0">{a.avatarEmoji}</span>
+                          <span className="text-white/80 truncate">{a.name}</span>
                         </span>
                       ))}
                     </div>
