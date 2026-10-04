@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Experience,
   Filters,
   ExperienceType,
   Budget,
   DareLevel,
+  WeatherForecast,
+  WeatherCondition,
 } from "@/lib/types";
 import { typeLabels, budgetLabels, vibeLabels } from "@/data/experiences";
 import {
@@ -20,23 +22,10 @@ import {
   Skull,
   Coffee,
   Compass,
-  Globe,
-  Sun,
-  CloudRain,
-  Snowflake,
   Calendar,
 } from "lucide-react";
 import InteractiveBackground from "@/components/InteractiveBackground";
-
-type WeatherCondition = "sunny" | "rain" | "snow" | "storm";
-type TimeFilter = "any" | "today" | "week" | "month";
-
-interface Weather {
-  temp: number;
-  condition: string;
-  icon: string;
-  location: string;
-}
+import DareAcceptedToast from "@/components/DareAcceptedToast";
 
 interface Props {
   filters: Filters;
@@ -45,9 +34,8 @@ interface Props {
   surprise: Experience | null;
   isGenerating: boolean;
   hasMatches: boolean;
-  liveMeta: { liveCount: number; apis: Record<string, boolean> } | null;
   loadingLive: boolean;
-  weather: Weather | null;
+  forecast: WeatherForecast | null;
   onGenerate: () => void;
   onAccept: () => void;
   onSkip: () => void;
@@ -65,20 +53,52 @@ const ALL_TYPES: ExperienceType[] = [
   "wellness",
 ];
 
+const toLocalDateStr = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+
 export default function ExploreView({
   filters,
   onFiltersChange,
   surprise,
   isGenerating,
   hasMatches,
-  liveMeta,
   loadingLive,
+  forecast,
   onGenerate,
   onAccept,
   onSkip,
 }: Props) {
-  const [activeWeather, setActiveWeather] = useState<WeatherCondition>("sunny");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("any");
+  // Next 7 days of selectable dates ("Any time" = no date filter).
+  const dateOptions = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const label =
+          i === 0
+            ? "Today"
+            : i === 1
+            ? "Tomorrow"
+            : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
+        return { value: toLocalDateStr(d), label };
+      }),
+    []
+  );
+
+  // Forecast only applies when a specific date is selected; "Any time" is neutral.
+  const forecastDay = filters.date
+    ? forecast?.days.find((d) => d.date === filters.date) ?? null
+    : null;
+  const activeWeather: WeatherCondition = forecastDay?.weather ?? "sunny";
+
+  const [acceptedDare, setAcceptedDare] = useState<Experience | null>(null);
+  const handleAccept = () => {
+    if (!surprise) return;
+    onAccept();
+    setAcceptedDare(surprise);
+  };
 
   const currentLevel = (
     typeof filters.dareLevel === "number" ? filters.dareLevel : 2
@@ -192,7 +212,25 @@ export default function ExploreView({
     }
   };
 
+  const getSecondaryButtonStyle = (level: DareLevel) => {
+    switch (level) {
+      case 1:
+        return "border-gray-400 text-gray-800 bg-white hover:bg-gray-100 font-semibold";
+      case 2:
+        return "border-slate-400 text-slate-800 bg-white hover:bg-slate-100 font-semibold";
+      case 3:
+        return "border-pink-500/40 text-pink-200 bg-pink-950/40 hover:bg-pink-950/60";
+      case 4:
+        return "border-emerald-500 text-emerald-400 bg-emerald-950/30 hover:bg-emerald-950/50 font-mono";
+      case 5:
+        return "border-cyan-400 text-cyan-300 bg-cyan-950/30 hover:bg-cyan-950/50 font-mono animate-chaotic-shake";
+      default:
+        return "border-slate-400 text-slate-800 bg-white hover:bg-slate-100 font-semibold";
+    }
+  };
+
   const activeTabClass = getActiveTabStyle(currentLevel);
+  const secondaryButtonClass = getSecondaryButtonStyle(currentLevel);
   const sliderAccent = getSliderAccent(currentLevel);
 
   const customLevelNames: Record<DareLevel, string> = {
@@ -258,42 +296,6 @@ export default function ExploreView({
       />
 
       <div className="relative z-10 space-y-6">
-        <div className="flex justify-end">
-          <div className="flex items-center gap-1 p-1 text-xs border rounded-lg bg-black/40 backdrop-blur-md border-white/10">
-            <span className="text-[9px] uppercase opacity-70 px-1 text-white">
-              Weather:
-            </span>
-            <button
-              onClick={() => setActiveWeather("sunny")}
-              className={`p-1.5 transition-all ${activeWeather === "sunny" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
-              title="Sunlight"
-            >
-              <Sun className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setActiveWeather("rain")}
-              className={`p-1.5 transition-all ${activeWeather === "rain" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
-              title="Rain"
-            >
-              <CloudRain className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setActiveWeather("snow")}
-              className={`p-1.5 transition-all ${activeWeather === "snow" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
-              title="Snow"
-            >
-              <Snowflake className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setActiveWeather("storm")}
-              className={`p-1.5 transition-all ${activeWeather === "storm" ? "bg-white text-black font-bold" : "opacity-40 hover:opacity-100 text-white"}`}
-              title="Storm"
-            >
-              <Zap className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="space-y-6 lg:col-span-2">
             {/* Filters Box */}
@@ -309,30 +311,52 @@ export default function ExploreView({
                   : "Set your preferences"}
               </h3>
 
-              {/* Time Filter Tabs */}
+              {/* Date selection */}
               <div>
                 <label
                   className={`block mb-2 text-sm font-medium opacity-80 ${currentLevel === 5 ? "font-bold text-fuchsia-400 animate-chaotic-shake" : ""}`}
                 >
-                  <Calendar className="inline w-4 h-4 mr-1 opacity-80" /> Time
-                  Horizon
+                  <Calendar className="inline w-4 h-4 mr-1 opacity-80" /> Date
                 </label>
-                <div className="flex gap-2">
-                  {(["any", "today", "week", "month"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTimeFilter(t)}
-                      className={`flex-1 py-1.5 text-sm font-medium uppercase transition-all ${
-                        timeFilter === t
-                          ? activeTabClass
-                          : currentLevel === 5
-                            ? "bg-fuchsia-950 text-cyan-300 border-2 border-fuchsia-500 animate-chaotic-shake text-sm"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300 text-sm"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => onFiltersChange({ ...filters, date: null })}
+                    className={`px-3 py-1.5 text-sm font-medium transition-all ${
+                      filters.date === null
+                        ? activeTabClass
+                        : currentLevel === 5
+                          ? "bg-fuchsia-950 text-cyan-300 border-2 border-fuchsia-500 animate-chaotic-shake text-sm"
+                          : currentLevel === 4
+                            ? "bg-stone-900 text-emerald-400 border border-emerald-500/50 text-sm"
+                            : currentLevel === 3
+                              ? "bg-slate-800/80 text-pink-200 border border-pink-500/30 hover:bg-slate-700 text-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300 text-sm"
+                    }`}
+                  >
+                    Any time
+                  </button>
+                  {dateOptions.map((opt) => {
+                    const isSelected = filters.date === opt.value;
+                    const unselectedClass =
+                      currentLevel === 5
+                        ? "bg-fuchsia-950 text-cyan-300 border-2 border-fuchsia-500 animate-chaotic-shake text-sm"
+                        : currentLevel === 4
+                          ? "bg-stone-900 text-emerald-400 border border-emerald-500/50 text-sm"
+                          : currentLevel === 3
+                            ? "bg-slate-800/80 text-pink-200 border border-pink-500/30 hover:bg-slate-700 text-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300 text-sm";
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => onFiltersChange({ ...filters, date: opt.value })}
+                        className={`px-3 py-1.5 text-sm font-medium transition-all ${
+                          isSelected ? activeTabClass : unselectedClass
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -511,29 +535,22 @@ export default function ExploreView({
               className={`p-4 flex items-center justify-between text-sm backdrop-blur-md border rounded-xl shadow-sm ${currentLevel === 3 ? "bg-slate-900/80 border-pink-500/50 text-pink-200" : currentLevel === 5 ? "bg-fuchsia-950/90 border-4 border-dashed border-cyan-400 text-cyan-300 font-mono animate-chaotic-shake" : currentLevel >= 4 ? "bg-black/80 border-emerald-500/50 text-emerald-300 font-mono" : "bg-white/80 border-slate-200 text-slate-800"}`}
             >
               <div className="flex items-center gap-2">
-                {activeWeather === "sunny" && (
-                  <Sun className="w-5 h-5 text-amber-400" />
-                )}
-                {activeWeather === "rain" && (
-                  <CloudRain className="w-5 h-5 text-blue-400" />
-                )}
-                {activeWeather === "snow" && (
-                  <Snowflake className="w-5 h-5 text-cyan-300" />
-                )}
-                {activeWeather === "storm" && (
-                  <Zap className="w-5 h-5 text-yellow-400" />
-                )}
+                <span className="text-2xl leading-none">{forecastDay?.icon ?? "🗓️"}</span>
                 <div>
                   <p className="text-xs font-bold tracking-wider uppercase">
                     Madrid, Spain
                   </p>
                   <p className="text-xs capitalize opacity-80">
-                    {activeWeather} • 22°C
+                    {filters.date
+                      ? forecastDay
+                        ? `${forecastDay.condition} • ${forecastDay.tempMax}° / ${forecastDay.tempMin}°`
+                        : "Forecast unavailable"
+                      : "Select a date for forecast"}
                   </p>
                 </div>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-black/20 uppercase tracking-widest font-bold">
-                API Connected
+                {filters.date ? "Live forecast" : "Any time"}
               </span>
             </div>
 
@@ -548,12 +565,6 @@ export default function ExploreView({
               </div>
             )}
 
-            {liveMeta && liveMeta.liveCount > 0 && (
-              <div className="flex items-center gap-1 text-xs px-2.5 py-1 bg-black/40 border border-white/10 text-ie-cyan">
-                <Globe className="w-3 h-3" />
-                {liveMeta.liveCount} live results
-              </div>
-            )}
           </div>
 
           <div className="space-y-6 lg:col-span-3">
@@ -607,27 +618,42 @@ export default function ExploreView({
                   >
                     {surprise.description}
                   </p>
-                  <div className="flex justify-center gap-3 pt-2">
-                    <button
-                      onClick={onAccept}
-                      className={`px-5 py-2.5 font-semibold ${activeTabClass}`}
-                    >
-                      {currentLevel === 5
-                        ? "CONSUME DARE"
-                        : currentLevel === 4
-                          ? "Confirm Route"
-                          : "Accept Dare"}
-                    </button>
-                    <button
-                      onClick={onSkip}
-                      className={`px-5 py-2.5 text-sm font-semibold opacity-70 hover:opacity-100 ${currentLevel === 5 ? "text-cyan-400 uppercase font-bold animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-500 font-mono" : ""}`}
-                    >
-                      {currentLevel === 5
-                        ? "FLEE"
-                        : currentLevel === 4
-                          ? "Dismiss"
-                          : "Skip"}
-                    </button>
+                  <div className="space-y-3 pt-2">
+                    {surprise.eventUrl && (
+                      <div className="flex justify-center">
+                        <a
+                          href={surprise.eventUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={`px-5 py-2.5 text-sm font-semibold border rounded-lg transition-colors ${secondaryButtonClass}`}
+                        >
+                          Event page
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap justify-center gap-3">
+                      <button
+                        onClick={handleAccept}
+                        className={`px-5 py-2.5 font-semibold ${activeTabClass}`}
+                      >
+                        {currentLevel === 5
+                          ? "CONSUME DARE"
+                          : currentLevel === 4
+                            ? "Confirm Route"
+                            : "Accept Dare"}
+                      </button>
+                      <button
+                        onClick={onSkip}
+                        className={`px-5 py-2.5 text-sm font-semibold opacity-70 hover:opacity-100 ${currentLevel === 5 ? "text-cyan-400 uppercase font-bold animate-chaotic-shake" : currentLevel === 4 ? "text-emerald-500 font-mono" : ""}`}
+                      >
+                        {currentLevel === 5
+                          ? "FLEE"
+                          : currentLevel === 4
+                            ? "Dismiss"
+                            : "Skip"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -653,6 +679,14 @@ export default function ExploreView({
           </div>
         </div>
       </div>
+
+      {acceptedDare && (
+        <DareAcceptedToast
+          experience={acceptedDare}
+          level={currentLevel}
+          onClose={() => setAcceptedDare(null)}
+        />
+      )}
     </div>
   );
 }

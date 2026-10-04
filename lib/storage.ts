@@ -1,4 +1,4 @@
-import { UserProfile, Filters, FriendProfile, CompletedExperience } from '@/lib/types';
+import { UserProfile, Filters, FriendProfile, CompletedExperience, ExperienceType } from '@/lib/types';
 
 const PROFILE_KEY = 'madrid-dare-profile';
 const FILTERS_KEY = 'madrid-dare-filters';
@@ -51,14 +51,16 @@ export function saveProfile(profile: UserProfile): void {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
+const VALID_TYPES: ExperienceType[] = ['food', 'nightlife', 'culture', 'adventure', 'wellness', 'sports', 'concerts'];
+
 export function getDefaultFilters(): Filters {
   return {
-    types: ['food', 'nightlife', 'culture', 'adventure', 'wellness', 'sports', 'concerts'],
+    types: VALID_TYPES,
     budget: 4,
     maxDistance: 10,
     vibe: 'any',
     dareLevel: 'any',
-    dateWindow: 'any',
+    date: null,
   };
 }
 
@@ -67,7 +69,11 @@ export function loadFilters(): Filters {
   const raw = localStorage.getItem(FILTERS_KEY);
   if (!raw) return getDefaultFilters();
   try {
-    return { ...getDefaultFilters(), ...JSON.parse(raw) };
+    const merged = { ...getDefaultFilters(), ...JSON.parse(raw) };
+    merged.types = (merged.types || []).filter((t: string) => VALID_TYPES.includes(t as ExperienceType));
+    if (merged.types.length === 0) merged.types = getDefaultFilters().types;
+    if (typeof merged.date !== 'string') merged.date = null;
+    return merged;
   } catch {
     return getDefaultFilters();
   }

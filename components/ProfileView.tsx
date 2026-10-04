@@ -14,6 +14,7 @@ type ProfileTab = 'activity' | 'saved' | 'plans';
 interface Props {
   profile: UserProfile;
   experiences: Experience[];
+  curatedExperiences?: Experience[];
   friendProfiles: FriendProfile[];
   onAddFriend: (email: string) => void;
   onRemoveFriend: (email: string) => void;
@@ -26,6 +27,7 @@ interface Props {
 export default function ProfileView({
   profile,
   experiences,
+  curatedExperiences = [],
   friendProfiles,
   onAddFriend,
   onRemoveFriend,
@@ -36,7 +38,8 @@ export default function ProfileView({
 }: Props) {
   const [newEmail, setNewEmail] = useState('');
   const [activeTab, setActiveTab] = useState<ProfileTab>('activity');
-  const expMap = new Map(experiences.map((e) => [e.id, e]));
+  const allExperiences = [...experiences, ...curatedExperiences];
+  const expMap = new Map(allExperiences.map((e) => [e.id, e]));
   const ordered = [...profile.completed].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
   const savedExperiences = profile.saved.map((id) => expMap.get(id)).filter(Boolean) as Experience[];
 
@@ -221,7 +224,7 @@ export default function ProfileView({
         {activeTab === 'plans' && (
           <PlansView
             profile={profile}
-            experiences={experiences}
+            experiences={allExperiences}
             friendProfiles={friendProfiles}
             onWantToGo={onWantToGo}
             onLogExperience={onLogExperience}

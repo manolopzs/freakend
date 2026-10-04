@@ -32,6 +32,7 @@ export default function SurpriseCard({
 }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [leverPulling, setLeverPulling] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (experience) {
@@ -94,18 +95,21 @@ export default function SurpriseCard({
       ? 'CURATED'
       : experience.source === 'google'
       ? 'GOOGLE PLACES'
-      : experience.source === 'eventbrite'
-      ? 'EVENTBRITE'
+      : experience.source === 'madrid'
+      ? 'MADRID AGENDA'
+      : experience.source === 'dondego'
+      ? 'DONDE GO'
       : 'TICKETMASTER';
 
   return (
     <div className={`comic-card overflow-hidden ${revealed ? 'animate-card-pop' : ''}`}>
       <div className="relative h-48 sm:h-56 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
         <div className="absolute inset-0 halftone-bg opacity-30" />
-        {experience.photoUrl ? (
+        {experience.photoUrl && !imageError ? (
           <img
             src={experience.photoUrl}
             alt={experience.title}
+            onError={() => setImageError(true)}
             className="absolute inset-0 w-full h-full object-cover opacity-70"
           />
         ) : null}
@@ -194,7 +198,7 @@ export default function SurpriseCard({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm font-bold text-freak-cyan hover:text-freak-yellow transition-colors"
             >
-              <ExternalLink className="w-4 h-4" /> Get tickets
+              <ExternalLink className="w-4 h-4" /> Event page
             </a>
           )}
         </div>

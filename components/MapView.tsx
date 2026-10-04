@@ -6,17 +6,19 @@ import { MapPin, Navigation, ChevronDown, ChevronUp, ExternalLink } from 'lucide
 
 interface Props {
   experiences: Experience[];
+  curatedExperiences?: Experience[];
   currentProfile: UserProfile;
   onToggleSave?: (experience: Experience) => void;
   onWantToGo?: (experience: Experience) => void;
 }
 
-export default function MapView({ experiences, currentProfile, onToggleSave, onWantToGo }: Props) {
+export default function MapView({ experiences, curatedExperiences = [], currentProfile, onToggleSave, onWantToGo }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const zones = useMemo(() => {
+    const allExperiences = [...experiences, ...curatedExperiences];
     const map = new Map<string, Experience[]>();
-    experiences.forEach((exp) => {
+    allExperiences.forEach((exp) => {
       const list = map.get(exp.neighborhood) || [];
       list.push(exp);
       map.set(exp.neighborhood, list);

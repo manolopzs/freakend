@@ -92,9 +92,7 @@ export default function SmartCarousels({
 }: Props) {
   const now = new Date();
   const day = now.getDay();
-  const hour = now.getHours();
   const isWeekend = day === 0 || day === 6 || day === 5;
-  const isEvening = hour >= 18 || hour <= 2;
 
   const logCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -110,13 +108,14 @@ export default function SmartCarousels({
   }, [profiles, currentProfile.saved]);
 
   const tonight = useMemo(() => {
-    return experiences.filter((e) => {
-      if (e.distanceKm > 5) return false;
-      const typeOk = ['food', 'nightlife', 'concerts'].includes(e.type);
-      const eveningVibe = isEvening ? true : e.type === 'food' || e.type === 'culture';
-      return typeOk && eveningVibe;
-    });
-  }, [experiences, isEvening]);
+    return experiences
+      .filter((e) => {
+        if (e.distanceKm > 10) return false;
+        return ['food', 'nightlife', 'concerts', 'culture', 'adventure'].includes(e.type);
+      })
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 12);
+  }, [experiences]);
 
   const thisWeekend = useMemo(() => {
     return experiences.filter((e) => {

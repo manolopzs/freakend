@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Experience } from '@/lib/types';
-import { MapPin, Bookmark, CalendarPlus, ExternalLink, PenLine } from 'lucide-react';
+import { MapPin, Bookmark, CalendarPlus, ExternalLink, PenLine, Ticket } from 'lucide-react';
 
 interface Props {
   experience: Experience;
@@ -22,13 +23,17 @@ export default function ExperienceCard({
   onLogExperience,
   className = '',
 }: Props) {
+  const [imageError, setImageError] = useState(false);
+  const showImage = experience.photoUrl && !imageError;
+
   return (
     <div className={`comic-card flex-shrink-0 w-72 overflow-hidden group snap-start ${className}`}>
       <div className="relative h-36 bg-gradient-to-br from-freak-panel to-black flex items-center justify-center">
-        {experience.photoUrl ? (
+        {showImage ? (
           <img
-            src={experience.photoUrl}
+            src={experience.photoUrl!}
             alt={experience.title}
+            onError={() => setImageError(true)}
             className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
           />
         ) : null}
@@ -102,6 +107,17 @@ export default function ExperienceCard({
               >
                 <PenLine className="w-3 h-3" /> Log
               </button>
+            )}
+            {experience.eventUrl && (
+              <a
+                href={experience.eventUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-freak-yellow/10 hover:bg-freak-yellow/20 border border-freak-yellow/40 text-freak-yellow text-[10px] font-black uppercase tracking-wider transition-colors"
+              >
+                <Ticket className="w-3 h-3" /> Event
+              </a>
             )}
             {experience.mapUrl && (
               <a

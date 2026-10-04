@@ -102,20 +102,37 @@ export default function FilterPanel({ filters, onChange }: Props) {
             <Calendar className="w-4 h-4 text-freak-orange" />
             When
           </label>
-          <div className="flex gap-2">
-            {(['any', 'day', 'weekend', 'month'] as const).map((window) => (
-              <button
-                key={window}
-                onClick={() => onChange({ ...filters, dateWindow: window })}
-                className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all border ${
-                  filters.dateWindow === window
-                    ? 'bg-freak-orange text-freak-bg border-freak-orange shadow-neon-orange'
-                    : 'bg-white/5 text-white/70 border-white/10 hover:border-white/20'
-                }`}
-              >
-                {window === 'any' ? 'Any' : window === 'day' ? 'Today' : window === 'weekend' ? 'Weekend' : 'Month'}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onChange({ ...filters, date: null })}
+              className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all border ${
+                filters.date === null
+                  ? 'bg-freak-orange text-freak-bg border-freak-orange shadow-neon-orange'
+                  : 'bg-white/5 text-white/70 border-white/10 hover:border-white/20'
+              }`}
+            >
+              Any time
+            </button>
+            {[0, 1, 2, 3].map((i) => {
+              const d = new Date();
+              d.setDate(d.getDate() + i);
+              const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const label =
+                i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString('en-GB', { weekday: 'short' });
+              return (
+                <button
+                  key={value}
+                  onClick={() => onChange({ ...filters, date: value })}
+                  className={`px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all border ${
+                    filters.date === value
+                      ? 'bg-freak-orange text-freak-bg border-freak-orange shadow-neon-orange'
+                      : 'bg-white/5 text-white/70 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

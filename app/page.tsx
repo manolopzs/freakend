@@ -1,15 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Experience, Filters, UserProfile, CompletedExperience, Comment, Plan } from '@/lib/types';
-
-interface Weather {
-  temp: number;
-  condition: string;
-  icon: string;
-  location: string;
-}
+import { Experience, Filters, UserProfile, CompletedExperience, Comment, Plan, WeatherForecast } from '@/lib/types';
 import { curatedExperiences } from '@/data/experiences';
+
 import {
   loadFilters,
   loadProfile,
@@ -41,27 +35,26 @@ export default function Home() {
   const [surprise, setSurprise] = useState<Experience | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newBadges, setNewBadges] = useState<string[]>([]);
-  const [experiences, setExperiences] = useState<Experience[]>(curatedExperiences);
-  const [liveMeta, setLiveMeta] = useState<{ liveCount: number; apis: Record<string, boolean> } | null>(null);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
-  const [weather, setWeather] = useState<Weather | null>(null);
+  const [forecast, setForecast] = useState<WeatherForecast | null>(null);
 
   useEffect(() => {
     setMounted(true);
     setProfile(loadProfile());
     setFilters(loadFilters());
 
-    const fetchWeather = async () => {
+    const fetchForecast = async () => {
       try {
-        const res = await fetch('/api/weather?lat=40.4168&lng=-3.7038');
+        const res = await fetch('/api/weather');
         if (!res.ok) return;
         const data = await res.json();
-        setWeather(data);
+        setForecast(data);
       } catch {
-        setWeather(null);
+        setForecast(null);
       }
     };
-    fetchWeather();
+    fetchForecast();
   }, []);
 
   useEffect(() => {
@@ -79,22 +72,21 @@ export default function Home() {
       setLoadingLive(true);
       try {
         const types = filters.types.join(',');
+        const dateParam = filters.date ? `&date=${encodeURIComponent(filters.date)}` : '';
         const res = await fetch(
-          `/api/experiences?types=${encodeURIComponent(types)}&dateWindow=${encodeURIComponent(filters.dateWindow)}`
+          `/api/experiences?types=${encodeURIComponent(types)}${dateParam}`
         );
         const data = await res.json();
         setExperiences(data.experiences);
-        setLiveMeta({ liveCount: data.meta.liveCount, apis: data.meta.apis });
       } catch {
-        setExperiences(curatedExperiences);
-        setLiveMeta(null);
+        setExperiences([]);
       } finally {
         setLoadingLive(false);
       }
     };
 
     fetchLive();
-  }, [filters?.types]);
+  }, [filters?.types, filters?.date]);
 
   const filteredExperiences = useMemo(() => {
     if (!filters) return [];
@@ -103,7 +95,7 @@ export default function Home() {
       if (exp.budget > filters.budget) return false;
       if (exp.distanceKm > filters.maxDistance) return false;
       if (filters.vibe !== 'any' && exp.vibe !== filters.vibe) return false;
-      if (filters.dareLevel !== 'any' && exp.dareLevel !== filters.dareLevel) return false;
+      if (filters.dareLevel !== 'any' && Math.abs(exp.dareLevel - (filters.dareLevel as number)) > 1) return false;
       return true;
     });
   }, [filters, experiences]);
@@ -415,6 +407,7 @@ export default function Home() {
             <FeedView
               profiles={allProfiles}
               experiences={experiences}
+              curatedExperiences={curatedExperiences}
               currentUserEmail={profile.email}
               currentUserName={profile.name}
               currentUserAvatar={profile.avatarEmoji}
@@ -432,9 +425,8 @@ export default function Home() {
             surprise={surprise}
             isGenerating={isGenerating}
             hasMatches={filteredExperiences.length > 0}
-            liveMeta={liveMeta}
             loadingLive={loadingLive}
-            weather={weather}
+            forecast={forecast}
             onGenerate={generateSurprise}
             onAccept={acceptDare}
             onSkip={skipDare}
@@ -448,6 +440,7 @@ export default function Home() {
         {activeTab === 'map' && (
           <MapView
             experiences={experiences}
+            curatedExperiences={curatedExperiences}
             currentProfile={profile}
             onToggleSave={handleToggleSave}
             onWantToGo={handleWantToGo}
@@ -467,6 +460,7 @@ export default function Home() {
           <ProfileView
             profile={profile}
             experiences={experiences}
+            curatedExperiences={curatedExperiences}
             friendProfiles={friendProfiles}
             onAddFriend={handleAddFriend}
             onRemoveFriend={handleRemoveFriend}

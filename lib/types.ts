@@ -20,7 +20,7 @@ export interface Experience {
   photoUrl?: string | null;
   mapUrl?: string;
   coordinates?: { lat: number; lng: number };
-  source: 'curated' | 'google' | 'eventbrite' | 'ticketmaster';
+  source: 'curated' | 'google' | 'ticketmaster' | 'madrid' | 'dondego';
   eventUrl?: string;
 }
 
@@ -30,7 +30,8 @@ export interface Filters {
   maxDistance: number;
   vibe: Vibe | 'any';
   dareLevel: DareLevel | 'any';
-  dateWindow: 'day' | 'weekend' | 'month' | 'any';
+  /** YYYY-MM-DD, null = any time. */
+  date: string | null;
 }
 
 export interface Comment {
@@ -115,4 +116,23 @@ export interface Level {
   level: number;
   name: string;
   minPoints: number;
+}
+
+export type WeatherCondition = 'sunny' | 'rain' | 'snow' | 'storm';
+
+export interface WeatherDay {
+  /** YYYY-MM-DD (Europe/Madrid). */
+  date: string;
+  tempMax: number;
+  tempMin: number;
+  precipitation: number;
+  condition: string;
+  icon: string;
+  /** Drives the animated background. */
+  weather: WeatherCondition;
+}
+
+export interface WeatherForecast {
+  location: string;
+  days: WeatherDay[];
 }

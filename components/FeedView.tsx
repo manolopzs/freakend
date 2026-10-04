@@ -12,6 +12,7 @@ interface FeedItem {
 interface Props {
   profiles: FriendProfile[];
   experiences: Experience[];
+  curatedExperiences?: Experience[];
   currentUserEmail?: string;
   currentUserName?: string;
   currentUserAvatar?: string;
@@ -20,6 +21,49 @@ interface Props {
 }
 
 const REACTIONS = ['🔥', '❤️', '👏', '😂'];
+
+const DUMMY_FEED_ITEMS: FeedItem[] = [
+  {
+    profile: { name: 'Marco R.', email: 'marco.r@student.ie.edu', cohort: 'MBA 2025', points: 1240, level: 4, avatarEmoji: '🇮🇹', completed: [] },
+    completed: { id: 'real-madrid-tour', completedAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(), rating: 5, dareLevel: 2, type: 'adventure', budget: 3, vibe: 'group', caption: 'I am officially a Madridista now. The Bernabéu is unreal.', tags: ['sports', 'stadium-tour'], reactions: { '🔥': ['me'], '❤️': ['sofia.l@student.ie.edu'] } },
+  },
+  {
+    profile: { name: 'Sofia L.', email: 'sofia.l@student.ie.edu', cohort: 'MIM 2026', points: 890, level: 3, avatarEmoji: '🇫🇷', completed: [] },
+    completed: { id: 'flamenco-corral', completedAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(), rating: 4, dareLevel: 2, type: 'culture', budget: 3, vibe: 'date', caption: 'The intensity of live flamenco gave me chills.', tags: ['culture', 'date-night'], reactions: { '👏': ['me'] } },
+  },
+  {
+    profile: { name: 'Alex K.', email: 'alex.k@student.ie.edu', cohort: 'MBA 2026', points: 1560, level: 5, avatarEmoji: '🇺🇸', completed: [] },
+    completed: { id: 'sala-caracol', completedAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(), rating: 5, dareLevel: 3, type: 'nightlife', budget: 2, vibe: 'group', caption: 'Discovered a Spanish indie band I now can\'t stop listening to.', tags: ['live-music', 'indie'], reactions: { '🔥': ['me', 'sofia.l@student.ie.edu'] } },
+  },
+  {
+    profile: { name: 'Juan P.', email: 'juan.p@student.ie.edu', cohort: 'MBA 2025', points: 720, level: 2, avatarEmoji: '🇪🇸', completed: [] },
+    completed: { id: 'churros-san-gines', completedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), rating: 4, dareLevel: 1, type: 'food', budget: 1, vibe: 'group', caption: '2 AM churros hit different after a long case study.', tags: ['late-night', 'sweet'], reactions: { '❤️': ['me'] } },
+  },
+  {
+    profile: { name: 'Emma W.', email: 'emma.w@student.ie.edu', cohort: 'MIM 2026', points: 640, level: 2, avatarEmoji: '🇬🇧', completed: [] },
+    completed: { id: 'retiro-rowboat', completedAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), rating: 4, dareLevel: 2, type: 'adventure', budget: 1, vibe: 'date', caption: 'Almost fell in the water but worth it for the laughs.', tags: ['outdoor', 'date'], reactions: { '😂': ['me'] } },
+  },
+  {
+    profile: { name: 'Lucas M.', email: 'lucas.m@student.ie.edu', cohort: 'MBA 2026', points: 980, level: 3, avatarEmoji: '🇩🇪', completed: [] },
+    completed: { id: 'mercado-san-miguel', completedAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(), rating: 5, dareLevel: 1, type: 'food', budget: 2, vibe: 'group', caption: 'Tapas crawl complete. Vermouth + croquetas = happiness.', tags: ['tapas', 'vermouth'], reactions: { '🔥': ['me'], '👏': ['sofia.l@student.ie.edu'] } },
+  },
+  {
+    profile: { name: 'Maria G.', email: 'maria.g@student.ie.edu', cohort: 'MBA 2025', points: 1100, level: 3, avatarEmoji: '🇧🇷', completed: [] },
+    completed: { id: 'terraza-360', completedAt: new Date(Date.now() - 1000 * 60 * 320).toISOString(), rating: 4, dareLevel: 1, type: 'nightlife', budget: 2, vibe: 'date', caption: 'Golden hour views over Gran Vía. Highly recommend.', tags: ['rooftop', 'sunset'], reactions: { '❤️': ['me'] } },
+  },
+  {
+    profile: { name: 'Diego S.', email: 'diego.s@student.ie.edu', cohort: 'MIM 2026', points: 530, level: 2, avatarEmoji: '🇨🇴', completed: [] },
+    completed: { id: 'el-rastro', completedAt: new Date(Date.now() - 1000 * 60 * 400).toISOString(), rating: 4, dareLevel: 2, type: 'adventure', budget: 1, vibe: 'solo', caption: 'Found a vintage Real Madrid poster. Best €10 spent this month.', tags: ['vintage', 'flea-market'], reactions: { '🔥': ['me'] } },
+  },
+  {
+    profile: { name: 'Ana B.', email: 'ana.b@student.ie.edu', cohort: 'MBA 2026', points: 760, level: 2, avatarEmoji: '🇲🇽', completed: [] },
+    completed: { id: 'prado-afterwork', completedAt: new Date(Date.now() - 1000 * 60 * 520).toISOString(), rating: 5, dareLevel: 2, type: 'culture', budget: 1, vibe: 'solo', caption: 'Two hours with Goya and zero distractions. Needed this.', tags: ['art', 'solo'], reactions: { '👏': ['me'] } },
+  },
+  {
+    profile: { name: 'Tom H.', email: 'tom.h@student.ie.edu', cohort: 'MBA 2025', points: 1320, level: 4, avatarEmoji: '🇦🇺', completed: [] },
+    completed: { id: 'chueca-tapas', completedAt: new Date(Date.now() - 1000 * 60 * 620).toISOString(), rating: 5, dareLevel: 2, type: 'nightlife', budget: 2, vibe: 'group', caption: 'Cohort night out in Chueca. Energy was unmatched.', tags: ['nightlife', 'cohort'], reactions: { '🔥': ['me'], '❤️': ['emma.w@student.ie.edu'], '😂': ['alex.k@student.ie.edu'] } },
+  },
+];
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -49,17 +93,21 @@ function ratingStars(value?: number) {
 export default function FeedView({
   profiles,
   experiences,
+  curatedExperiences = [],
   currentUserEmail,
   currentUserName,
   currentUserAvatar,
   onToggleReaction,
   onAddComment,
 }: Props) {
-  const expMap = useMemo(() => new Map(experiences.map((e) => [e.id, e])), [experiences]);
+  const expMap = useMemo(
+    () => new Map([...experiences, ...curatedExperiences].map((e) => [e.id, e])),
+    [experiences, curatedExperiences]
+  );
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
 
   const feedItems = useMemo<FeedItem[]>(() => {
-    const items: FeedItem[] = [];
+    const items: FeedItem[] = [...DUMMY_FEED_ITEMS];
     profiles.forEach((profile) => {
       profile.completed.forEach((completed) => {
         const isMe = profile.email === (currentUserEmail || 'me');

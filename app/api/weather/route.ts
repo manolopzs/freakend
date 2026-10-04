@@ -1,63 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { WeatherDay, WeatherForecast, WeatherCondition } from '@/lib/types';
 
-interface WeatherPayload {
-  temp: number;
-  condition: string;
-  icon: string;
-  location: string;
+export const dynamic = 'force-dynamic';
+
+// Open-Meteo is free and requires no API key. 7-day daily forecast for Madrid.
+const OPEN_METEO_URL =
+  'https://api.open-meteo.com/v1/forecast?latitude=40.4168&longitude=-3.7038&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=Europe/Madrid&forecast_days=7';
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || '';
+// WMO weather interpretation codes → app condition.
+// https://open-meteo.com/en/docs (weathercode)
+function mapWeatherCode(code: number): { condition: string; icon: string; weather: WeatherCondition } {
+  if (code >= 95) return { condition: 'Thunderstorm', icon: '⛈️', weather: 'storm' };
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { condition: 'Snow', icon: '❄️', weather: 'snow' };
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return { condition: 'Rain', icon: '🌧️', weather: 'rain' };
+  if (code === 45 || code === 48) return { condition: 'Fog', icon: '🌫️', weather: 'sunny' };
+  if (code === 3) return { condition: 'Overcast', icon: '☁️', weather: 'sunny' };
+  if (code === 2) return { condition: 'Partly cloudy', icon: '⛅', weather: 'sunny' };
+  return { condition: 'Sunny', icon: '☀️', weather: 'sunny' };
+}
 
-function getMockWeather(): WeatherPayload {
+function mockForecast(): WeatherForecast {
   return {
-    temp: 22,
-    condition: 'Sunny',
-    icon: '☀️',
     location: 'Madrid',
+    days: [
+      { date: todayStr(), tempMax: 22, tempMin: 12, precipitation: 0, condition: 'Sunny', icon: '☀️', weather: 'sunny' },
+    ],
   };
 }
 
-function mapOpenWeatherCondition(code: number): { condition: string; icon: string } {
-  if (code >= 200 && code < 300) return { condition: 'Thunderstorm', icon: '⛈️' };
-  if (code >= 300 && code < 400) return { condition: 'Drizzle', icon: '🌦️' };
-  if (code >= 500 && code < 600) return { condition: 'Rain', icon: '🌧️' };
-  if (code >= 600 && code < 700) return { condition: 'Snow', icon: '❄️' };
-  if (code >= 700 && code < 800) return { condition: 'Mist', icon: '🌫️' };
-  if (code === 800) return { condition: 'Clear', icon: '☀️' };
-  if (code === 801) return { condition: 'Few clouds', icon: '🌤️' };
-  if (code === 802 || code === 803) return { condition: 'Cloudy', icon: '⛅' };
-  if (code === 804) return { condition: 'Overcast', icon: '☁️' };
-  return { condition: 'Clear', icon: '☀️' };
-}
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const lat = parseFloat(searchParams.get('lat') || '40.4168');
-  const lng = parseFloat(searchParams.get('lng') || '-3.7038');
-
-  if (!OPENWEATHER_API_KEY) {
-    return NextResponse.json(getMockWeather());
-  }
-
+export async function GET() {
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OPENWEATHER_API_KEY}&units=metric`;
-    const res = await fetch(url);
+    const res = await fetch(OPEN_METEO_URL, { cache: 'no-store' });
     if (!res.ok) {
-      return NextResponse.json(getMockWeather());
+      return NextResponse.json(mockForecast());
     }
     const data = await res.json();
-    const mapped = mapOpenWeatherCondition(data.weather?.[0]?.id ?? 800);
+    const daily = data.daily;
+    const dates: string[] = daily?.time ?? [];
+    if (dates.length === 0 || !Array.isArray(daily?.temperature_2m_max)) {
+      return NextResponse.json(mockForecast());
+    }
 
-    const weather: WeatherPayload = {
-      temp: Math.round(data.main?.temp ?? 22),
-      condition: mapped.condition,
-      icon: mapped.icon,
-      location: data.name || 'Madrid',
-    };
+    const days: WeatherDay[] = dates.map((date, i) => {
+      const { condition, icon, weather } = mapWeatherCode(daily.weathercode?.[i] ?? 0);
+      return {
+        date,
+        tempMax: Math.round(daily.temperature_2m_max[i]),
+        tempMin: Math.round(daily.temperature_2m_min[i]),
+        precipitation: daily.precipitation_sum?.[i] ?? 0,
+        condition,
+        icon,
+        weather,
+      };
+    });
 
-    return NextResponse.json(weather);
+    const forecast: WeatherForecast = { location: 'Madrid', days };
+    return NextResponse.json(forecast);
   } catch {
-    return NextResponse.json(getMockWeather());
+    return NextResponse.json(mockForecast());
   }
 }
