@@ -9,8 +9,8 @@ const TICKETMASTER_KEY = process.env.TICKETMASTER_API_KEY || '';
 const UNSPLASH_KEY = process.env.UNSPLASH_API_KEY || '';
 
 // Optional Spanish -> English translation. Set in .env to enable.
-// Google Translate (no key): TRANSLATION_API_URL=https://clients5.google.com/translate_a/t
-// LibreTranslate (key usually required): https://portal.libretranslate.com
+// Production recommendation: Google Cloud Translation API or LibreTranslate.
+// Falls back to free MyMemory API if nothing is configured.
 const TRANSLATION_API_URL = process.env.TRANSLATION_API_URL || '';
 const TRANSLATION_API_KEY = process.env.TRANSLATION_API_KEY || '';
 
@@ -173,7 +173,8 @@ async function fetchGooglePlaces(type: ExperienceType): Promise<Experience[]> {
         source: 'google',
       };
     });
-  } catch {
+  } catch (err) {
+    console.error('Google Places fetch failed:', err);
     return [];
   }
 }
@@ -228,7 +229,8 @@ async function fetchTicketmaster(date: string | null): Promise<Experience[]> {
         source: 'ticketmaster',
       };
     });
-  } catch {
+  } catch (err) {
+    console.error('Ticketmaster fetch failed:', err);
     return [];
   }
 }
@@ -464,44 +466,45 @@ async function fetchMadridAgenda(date: string | null): Promise<{ events: Experie
       });
     }
 
-    const titles = rawEvents.map((r) => r.title);
-    const descriptions = rawEvents.map((r) => r.description);
+    // Only translate/decorate the events we will actually return.
+    const upcomingRaw = rawEvents
+      .sort((a, b) => a.start - b.start)
+      .slice(0, 24);
+
+    const titles = upcomingRaw.map((r) => r.title);
+    const descriptions = upcomingRaw.map((r) => r.description);
     const [translatedTitles, translatedDescriptions, photoUrls] = await Promise.all([
       translateTexts(titles),
       translateTexts(descriptions),
-      Promise.all(rawEvents.map((r) => searchMadridPhotoUrl(r.title))),
+      Promise.all(upcomingRaw.map((r) => searchMadridPhotoUrl(r.title))),
     ]);
 
-    const upcoming = rawEvents
-      .map((r, i): { exp: Experience; start: number } => {
-        const title = translatedTitles[i] || r.title;
-        return {
-          start: r.start,
-          exp: {
-            id: r.id,
-            title,
-            description: translatedDescriptions[i] || r.description,
-            type: r.type,
-            budget: r.budget,
-            distanceKm: r.distanceKm,
-            neighborhood: r.neighborhood,
-            vibe: r.type === 'culture' ? 'date' : 'group',
-            dareLevel: assignDareLevel(r.type, title),
-            emoji: r.emoji,
-            address: r.address,
-            whySpecial: r.whySpecial,
-            coordinates: r.coordinates,
-            mapUrl: r.mapUrl,
-            eventUrl: r.eventUrl,
-            photoUrl: getPhotoUrl(r.type, photoUrls[i]),
-            source: 'madrid',
-          },
-        };
-      })
-      .sort((a, b) => a.start - b.start);
+    const upcoming: Experience[] = upcomingRaw.map((r, i) => {
+      const title = translatedTitles[i] || r.title;
+      return {
+        id: r.id,
+        title,
+        description: translatedDescriptions[i] || r.description,
+        type: r.type,
+        budget: r.budget,
+        distanceKm: r.distanceKm,
+        neighborhood: r.neighborhood,
+        vibe: r.type === 'culture' ? 'date' : 'group',
+        dareLevel: assignDareLevel(r.type, title),
+        emoji: r.emoji,
+        address: r.address,
+        whySpecial: r.whySpecial,
+        coordinates: r.coordinates,
+        mapUrl: r.mapUrl,
+        eventUrl: r.eventUrl,
+        photoUrl: getPhotoUrl(r.type, photoUrls[i]),
+        source: 'madrid',
+      };
+    });
 
-    return { events: upcoming.slice(0, 24).map((p) => p.exp), ok: true };
-  } catch {
+    return { events: upcoming, ok: true };
+  } catch (err) {
+    console.error('Madrid agenda processing failed:', err);
     return { events: [], ok: false };
   }
 }
@@ -521,13 +524,34 @@ function distanceToIE(lat: number, lng: number): number {
 }
 
 // --- Optional Spanish -> English translation ---
-// Supports LibreTranslate and the undocumented Google Translate endpoint.
+// Supports Google Cloud Translation API, LibreTranslate, the undocumented
+// clients5.google.com endpoint, and a free MyMemory fallback.
 async function translateTexts(texts: string[]): Promise<string[]> {
-  if (!TRANSLATION_API_URL || texts.length === 0) return texts;
-  if (TRANSLATION_API_URL.includes('clients5.google.com')) {
-    return translateWithGoogle(texts);
+  if (texts.length === 0) return texts;
+
+  // 1. Configured provider (if any).
+  if (TRANSLATION_API_URL) {
+    try {
+      if (TRANSLATION_API_URL.includes('translation.googleapis.com')) {
+        return await translateWithGoogleCloud(texts);
+      }
+      if (TRANSLATION_API_URL.includes('clients5.google.com')) {
+        return await translateWithGoogle(texts);
+      }
+      return await translateWithLibreTranslate(texts);
+    } catch (err) {
+      console.error('Configured translation provider failed:', err);
+    }
   }
-  return translateWithLibreTranslate(texts);
+
+  // 2. Free fallback: MyMemory (works from most serverless hosts).
+  try {
+    return await translateWithMyMemory(texts);
+  } catch (err) {
+    console.error('MyMemory translation fallback failed:', err);
+  }
+
+  return texts;
 }
 
 async function translateText(text: string): Promise<string> {
@@ -535,42 +559,56 @@ async function translateText(text: string): Promise<string> {
   return result;
 }
 
-async function translateWithLibreTranslate(texts: string[]): Promise<string[]> {
-  try {
-    const body: Record<string, any> = {
-      q: texts,
-      source: 'es',
-      target: 'en',
-      format: 'text',
-    };
-    if (TRANSLATION_API_KEY) body.api_key = TRANSLATION_API_KEY;
-    const res = await fetch(TRANSLATION_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000),
-      cache: 'no-store',
-    });
-    if (!res.ok) return texts;
-    const data = await res.json();
-    if (Array.isArray(data.translatedText)) {
-      return data.translatedText.map((t: any, i: number) =>
-        typeof t === 'string' && t.trim() ? t : texts[i]
-      );
-    }
-    if (typeof data.translatedText === 'string') {
-      return texts.map((original, i) => (i === 0 ? data.translatedText : original));
-    }
-    return texts;
-  } catch {
-    return texts;
-  }
+async function translateWithGoogleCloud(texts: string[]): Promise<string[]> {
+  const body = {
+    q: texts,
+    source: 'es',
+    target: 'en',
+    format: 'text',
+    key: TRANSLATION_API_KEY,
+  };
+  const res = await fetch(TRANSLATION_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`Google Cloud HTTP ${res.status}`);
+  const data = await res.json();
+  const translations = data.data?.translations || [];
+  return translations.map((t: any, i: number) => t.translatedText || texts[i]);
 }
 
-// Google Translate internal endpoint used by some browser clients.
-// Working client values include dict-chrome-ex, at, tw-ob. Sends multiple q params
-// for batching. Response is usually ["text1","text2",...] or, for longer text,
-// [[["translated","original",...]],...].
+async function translateWithLibreTranslate(texts: string[]): Promise<string[]> {
+  const body: Record<string, any> = {
+    q: texts,
+    source: 'es',
+    target: 'en',
+    format: 'text',
+  };
+  if (TRANSLATION_API_KEY) body.api_key = TRANSLATION_API_KEY;
+  const res = await fetch(TRANSLATION_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`LibreTranslate HTTP ${res.status}`);
+  const data = await res.json();
+  if (Array.isArray(data.translatedText)) {
+    return data.translatedText.map((t: any, i: number) =>
+      typeof t === 'string' && t.trim() ? t : texts[i]
+    );
+  }
+  if (typeof data.translatedText === 'string') {
+    return texts.map((original, i) => (i === 0 ? data.translatedText : original));
+  }
+  throw new Error('Unexpected LibreTranslate response shape');
+}
+
+// Undocumented Google Translate browser endpoint. Often blocked on serverless IPs.
 async function translateWithGoogle(texts: string[]): Promise<string[]> {
   if (texts.length === 0) return texts;
   const results: string[] = [];
@@ -586,43 +624,66 @@ async function translateWithGoogle(texts: string[]): Promise<string[]> {
 async function translateWithGoogleChunk(texts: string[]): Promise<string[]> {
   const nonEmpty = texts.map((t) => t || '');
   if (nonEmpty.length === 0) return texts;
-  try {
-    const params = new URLSearchParams({
-      client: 'dict-chrome-ex',
-      sl: 'es',
-      tl: 'en',
-      dt: 't',
-    });
-    nonEmpty.forEach((t) => params.append('q', t));
-    const res = await fetch(`${TRANSLATION_API_URL}?${params.toString()}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Referer: 'https://translate.google.com/',
-      },
-      signal: AbortSignal.timeout(15000),
-      cache: 'no-store',
-    });
-    if (!res.ok) return texts;
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      // Simple batch shape: ["text1","text2",...]
-      if (data.length > 0 && data.every((item: any) => typeof item === 'string')) {
-        return data.map((t: any, i: number) => (t && String(t).trim() ? t : texts[i]));
-      }
-      // Nested shape: [[["translated","original",...]],...]
-      return data.map((chunk: any, i: number) => {
-        const sentences = chunk?.map((item: any) => item?.[0]).filter(Boolean) || [];
-        return sentences.join('') || texts[i];
-      });
+  const params = new URLSearchParams({
+    client: 'dict-chrome-ex',
+    sl: 'es',
+    tl: 'en',
+    dt: 't',
+  });
+  nonEmpty.forEach((t) => params.append('q', t));
+  const res = await fetch(`${TRANSLATION_API_URL}?${params.toString()}`, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      Referer: 'https://translate.google.com/',
+    },
+    signal: AbortSignal.timeout(8000),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`Google clients5 HTTP ${res.status}`);
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    if (data.length > 0 && data.every((item: any) => typeof item === 'string')) {
+      return data.map((t: any, i: number) => (t && String(t).trim() ? t : texts[i]));
     }
-    if (data?.sentences) {
-      return [data.sentences.map((s: any) => s.trans).join('') || texts[0]];
-    }
-    return texts;
-  } catch {
-    return texts;
+    return data.map((chunk: any, i: number) => {
+      const sentences = chunk?.map((item: any) => item?.[0]).filter(Boolean) || [];
+      return sentences.join('') || texts[i];
+    });
   }
+  if (data?.sentences) {
+    return [data.sentences.map((s: any) => s.trans).join('') || texts[0]];
+  }
+  throw new Error('Unexpected Google clients5 response shape');
+}
+
+// MyMemory free translation API. Anonymous usage is limited but works from servers.
+async function translateWithMyMemory(texts: string[]): Promise<string[]> {
+  const results: string[] = [];
+  // Run in small batches to avoid rate limits.
+  const batchSize = 4;
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const translated = await Promise.all(
+      batch.map(async (text) => {
+        if (!text) return text;
+        try {
+          const q = encodeURIComponent(text);
+          const res = await fetch(
+            `https://api.mymemory.translated.net/get?q=${q}&langpair=es|en`,
+            { signal: AbortSignal.timeout(8000), cache: 'no-store' }
+          );
+          if (!res.ok) return text;
+          const data = await res.json();
+          return data.responseData?.translatedText || text;
+        } catch {
+          return text;
+        }
+      })
+    );
+    results.push(...translated);
+  }
+  return results;
 }
 
 // --- DondeGo (Madrid events) ---
@@ -682,6 +743,7 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
   try {
     const res = await fetch(`${DONDE_GO_BASE}/events/${id}/?expand=place,dates,images`, {
       cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
     const d = await res.json();
@@ -727,7 +789,8 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
       eventUrl: d.site_url,
       source: 'dondego',
     };
-  } catch {
+  } catch (err) {
+    console.error(`DondeGo detail fetch failed for event ${id}:`, err);
     return null;
   }
 }
@@ -736,16 +799,19 @@ async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experi
   try {
     const res = await fetch(`${DONDE_GO_BASE}/events/?location=madrid&page_size=100`, {
       cache: 'no-store',
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return { events: [], ok: false };
+    if (!res.ok) {
+      console.error('DondeGo list fetch failed:', res.status, res.statusText);
+      return { events: [], ok: false };
+    }
     const data = await res.json();
     const results = data.results || [];
 
     const rawEvents: RawDondeGoEvent[] = [];
-    const batchSize = 15;
-    const maxBatches = 4; // cap requests to avoid timeout
-    for (let i = 0; i < results.length && rawEvents.length < 18 && i < batchSize * maxBatches; i += batchSize) {
+    const batchSize = 5;
+    const maxBatches = 8; // cap at 40 detail requests to find future events while staying within serverless limits
+    for (let i = 0; i < results.length && rawEvents.length < 16 && i < batchSize * maxBatches; i += batchSize) {
       const batch = results.slice(i, i + batchSize);
       const details = await Promise.all(batch.map((s: any) => fetchDondeGoEventDetail(s.id, date)));
       rawEvents.push(...(details.filter(Boolean) as RawDondeGoEvent[]));
@@ -770,8 +836,9 @@ async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experi
       };
     });
 
-    return { events: events.slice(0, 18), ok: true };
-  } catch {
+    return { events: events.slice(0, 16), ok: true };
+  } catch (err) {
+    console.error('DondeGo events fetch failed:', err);
     return { events: [], ok: false };
   }
 }
@@ -786,30 +853,46 @@ export async function GET(request: NextRequest) {
   const dateParam = searchParams.get('date');
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null;
 
-  const liveResults: Experience[] = [];
-
-  for (const type of types) {
-    liveResults.push(...(await fetchGooglePlaces(type)));
-  }
-
   const eventTypes: ExperienceType[] = ['culture', 'nightlife', 'concerts', 'adventure'];
   const wantsEvents = types.some((t) => eventTypes.includes(t));
+  const wantsTicketmaster = types.some((t) => ['culture', 'nightlife', 'concerts'].includes(t));
+  const debug = searchParams.get('debug') === '1';
 
-  let madridOk = true;
-  let dondegoOk = true;
-  if (wantsEvents) {
-    const madrid = await fetchMadridAgenda(date);
-    liveResults.push(...madrid.events);
-    madridOk = madrid.ok;
+  // Fetch all live sources in parallel so a slow one doesn't block the others.
+  const rawResults = await Promise.allSettled([
+    Promise.all(types.map((type) => fetchGooglePlaces(type))).then((groups) => groups.flat()),
+    wantsEvents ? fetchMadridAgenda(date) : Promise.resolve({ events: [], ok: true }),
+    wantsEvents ? fetchDondeGoEvents(date) : Promise.resolve({ events: [], ok: true }),
+    wantsEvents && wantsTicketmaster ? fetchTicketmaster(date) : Promise.resolve([]),
+  ]);
 
-    const dondego = await fetchDondeGoEvents(date);
-    liveResults.push(...dondego.events);
-    dondegoOk = dondego.ok;
+  const [googleEventsResult, madridResult, dondegoResult, ticketmasterResult] = rawResults;
+  const googleEvents = googleEventsResult.status === 'fulfilled' ? googleEventsResult.value : [];
+  const madrid = madridResult.status === 'fulfilled' ? madridResult.value : { events: [], ok: false };
+  const dondego = dondegoResult.status === 'fulfilled' ? dondegoResult.value : { events: [], ok: false };
+  const ticketmasterEvents = ticketmasterResult.status === 'fulfilled' ? ticketmasterResult.value : [];
 
-    if (types.some((t) => ['culture', 'nightlife', 'concerts'].includes(t))) {
-      liveResults.push(...(await fetchTicketmaster(date)));
-    }
+  const errors: string[] = [];
+  if (debug) {
+    if (googleEventsResult.status === 'rejected') errors.push(`google: ${String(googleEventsResult.reason)}`);
+    if (madridResult.status === 'rejected') errors.push(`madrid: ${String(madridResult.reason)}`);
+    if (dondegoResult.status === 'rejected') errors.push(`dondego: ${String(dondegoResult.reason)}`);
+    if (ticketmasterResult.status === 'rejected') errors.push(`ticketmaster: ${String(ticketmasterResult.reason)}`);
+  } else {
+    // Always log rejections for observability.
+    rawResults.forEach((r, i) => {
+      if (r.status === 'rejected') console.error(`API source ${i} failed:`, r.reason);
+    });
   }
+
+  const liveResults: Experience[] = [
+    ...(Array.isArray(googleEvents) ? googleEvents : []),
+    ...madrid.events,
+    ...dondego.events,
+    ...(Array.isArray(ticketmasterEvents) ? ticketmasterEvents : []),
+  ];
+  const madridOk = madrid.ok;
+  const dondegoOk = dondego.ok;
 
   const filtered = liveResults.filter((exp) => types.includes(exp.type));
 
@@ -823,6 +906,7 @@ export async function GET(request: NextRequest) {
         madrid: madridOk,
         dondego: dondegoOk,
       },
+      ...(errors.length > 0 && { errors }),
     },
   });
 }
