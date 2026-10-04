@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Experience, ExperienceType, Budget, DareLevel } from '@/lib/types';
+import { curatedExperiences } from '@/data/experiences';
 
 // Live data changes constantly — never cache the route or the upstream fetches.
 export const dynamic = 'force-dynamic';
@@ -988,7 +989,12 @@ export async function GET(request: NextRequest) {
   const madridOk = madrid.ok;
   const dondegoOk = dondego.ok;
 
-  const filtered = liveResults.filter((exp) => types.includes(exp.type));
+  // Inject generated high-dare curated events (level 4/5) because real APIs rarely offer them.
+  const highDareCurated = curatedExperiences.filter(
+    (e) => e.dareLevel >= 4 && types.includes(e.type)
+  );
+
+  const filtered = [...liveResults, ...highDareCurated].filter((exp) => types.includes(exp.type));
 
   return NextResponse.json({
     experiences: filtered,
