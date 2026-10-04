@@ -721,9 +721,17 @@ function parseDondeGoBudget(price: string | null, isFree: boolean | null): Budge
 }
 
 function getDondeGoDateRange(dates: any[]): { start: Date | null; end: Date | null } {
+  const now = new Date();
+  // For recurring events we only care about future (or currently running) occurrences.
+  const futureDates = dates.filter((d) => {
+    if (!d.start && !d.end) return false;
+    const end = d.end ? new Date(d.end * 1000) : null;
+    return !end || end >= now;
+  });
+
   let start: Date | null = null;
   let end: Date | null = null;
-  for (const d of dates) {
+  for (const d of futureDates) {
     if (d.start) {
       const t = new Date(d.start * 1000);
       if (!start || t < start) start = t;
@@ -736,36 +744,60 @@ function getDondeGoDateRange(dates: any[]): { start: Date | null; end: Date | nu
   return { start, end };
 }
 
+function getDondeGoDefaultWindow(now: Date): Date {
+  // Without an explicit date filter, only show events within the next 3 days
+  // (tonight + this weekend) so users don't see events months away.
+  const max = new Date(now);
+  max.setDate(now.getDate() + 3);
+  max.setHours(23, 59, 59, 999);
+  return max;
+}
+
 type RawDondeGoEvent = Omit<Experience, 'title' | 'description' | 'dareLevel'> & {
   rawTitle: string;
   rawDescription: string;
 };
 
+const DONDE_GO_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      cache: 'no-store',
+      signal: ctrl.signal,
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': DONDE_GO_UA,
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchDondeGoWithRetry(url: string, timeoutMs: number, retries = 1): Promise<Response | null> {
+  let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(timeoutMs),
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; Freakend/1.0; +https://freakend.app)',
-        },
-      });
+      const res = await fetchWithTimeout(url, timeoutMs);
       if (res.ok) return res;
       if (res.status === 429 && attempt < retries) {
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        console.warn(`DondeGo 429 on ${url}, retrying...`);
+        await new Promise((r) => setTimeout(r, 750 * (attempt + 1)));
         continue;
       }
       return res;
     } catch (err) {
-      if (attempt >= retries) {
-        console.error(`DondeGo fetch failed after ${retries + 1} attempts: ${url}`, err);
-        return null;
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 750 * (attempt + 1)));
       }
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     }
   }
+  console.error(`DondeGo fetch failed after ${retries + 1} attempts: ${url}`, lastErr);
   return null;
 }
 
@@ -787,11 +819,18 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
     const { start, end } = getDondeGoDateRange(d.dates || []);
     const now = new Date();
     if (end && end < now) return null;
-    if (date && start && end) {
-      const [y, m, day] = date.split('-').map(Number);
-      const dayStart = new Date(y, m - 1, day);
-      const dayEnd = new Date(y, m - 1, day, 23, 59, 59, 999);
-      if (start > dayEnd || end < dayStart) return null;
+    if (date) {
+      // Strict: event must overlap the selected date.
+      if (start && end) {
+        const [y, m, day] = date.split('-').map(Number);
+        const dayStart = new Date(y, m - 1, day);
+        const dayEnd = new Date(y, m - 1, day, 23, 59, 59, 999);
+        if (start > dayEnd || end < dayStart) return null;
+      }
+    } else {
+      // Default: only upcoming events within the next 3 days.
+      const maxDate = getDondeGoDefaultWindow(now);
+      if (!start || start > maxDate) return null;
     }
 
     const { type, emoji } = mapDondeGoCategory(d.categories || []);
@@ -830,7 +869,10 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
   }
 }
 
-async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experience[]; ok: boolean }> {
+async function fetchDondeGoEvents(
+  date: string | null
+): Promise<{ events: Experience[]; ok: boolean; debug?: Record<string, unknown> }> {
+  const debugInfo: Record<string, unknown> = { windowDays: 3 };
   try {
     const listRes = await fetchDondeGoWithRetry(
       `${DONDE_GO_BASE}/events/?location=madrid&page_size=100`,
@@ -838,25 +880,34 @@ async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experi
       1
     );
     if (!listRes) {
+      debugInfo.listError = 'network/timeout after retry';
       console.error('DondeGo list fetch failed: network error');
-      return { events: [], ok: false };
+      return { events: [], ok: false, debug: debugInfo };
     }
     if (!listRes.ok) {
+      debugInfo.listStatus = listRes.status;
+      debugInfo.listStatusText = listRes.statusText;
       console.error('DondeGo list fetch failed:', listRes.status, listRes.statusText);
-      return { events: [], ok: false };
+      return { events: [], ok: false, debug: debugInfo };
     }
     const data = await listRes.json();
     const results = data.results || [];
+    debugInfo.listCount = results.length;
     console.log('DondeGo list returned', results.length, 'events');
 
     const rawEvents: RawDondeGoEvent[] = [];
     const batchSize = 3; // smaller batches to avoid rate-limiting on shared serverless IPs
     const maxBatches = 14; // up to 42 detail requests, but stop early once we have enough future events
+    const sampledIds = results.slice(0, batchSize * maxBatches).map((s: any) => s.id);
+    debugInfo.scannedIds = sampledIds.slice(0, 12);
+    debugInfo.scannedCount = sampledIds.length;
+
     for (let i = 0; i < results.length && rawEvents.length < 16 && i < batchSize * maxBatches; i += batchSize) {
       const batch = results.slice(i, i + batchSize);
       const details = await Promise.all(batch.map((s: any) => fetchDondeGoEventDetail(s.id, date)));
       rawEvents.push(...(details.filter(Boolean) as RawDondeGoEvent[]));
     }
+    debugInfo.keptCount = rawEvents.length;
     console.log('DondeGo kept', rawEvents.length, 'future events after detail filtering');
 
     const titles = rawEvents.map((r) => r.rawTitle);
@@ -878,10 +929,11 @@ async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experi
       };
     });
 
-    return { events: events.slice(0, 16), ok: true };
+    return { events: events.slice(0, 16), ok: true, debug: debugInfo };
   } catch (err) {
+    debugInfo.topError = String(err);
     console.error('DondeGo events fetch failed:', err);
-    return { events: [], ok: false };
+    return { events: [], ok: false, debug: debugInfo };
   }
 }
 
@@ -949,6 +1001,7 @@ export async function GET(request: NextRequest) {
         dondego: dondegoOk,
       },
       ...(errors.length > 0 && { errors }),
+      ...(debug && (dondego as any).debug && { dondego: (dondego as any).debug }),
     },
   });
 }
