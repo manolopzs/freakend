@@ -3,6 +3,8 @@ import { Experience, ExperienceType, Budget, DareLevel } from '@/lib/types';
 
 // Live data changes constantly — never cache the route or the upstream fetches.
 export const dynamic = 'force-dynamic';
+// Run close to the Madrid-based upstream APIs for lower latency.
+export const preferredRegion = 'fra1';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || '';
 const TICKETMASTER_KEY = process.env.TICKETMASTER_API_KEY || '';
@@ -739,13 +741,46 @@ type RawDondeGoEvent = Omit<Experience, 'title' | 'description' | 'dareLevel'> &
   rawDescription: string;
 };
 
+async function fetchDondeGoWithRetry(url: string, timeoutMs: number, retries = 1): Promise<Response | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; Freakend/1.0; +https://freakend.app)',
+        },
+      });
+      if (res.ok) return res;
+      if (res.status === 429 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt >= retries) {
+        console.error(`DondeGo fetch failed after ${retries + 1} attempts: ${url}`, err);
+        return null;
+      }
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  return null;
+}
+
 async function fetchDondeGoEventDetail(id: number, date: string | null): Promise<RawDondeGoEvent | null> {
   try {
-    const res = await fetch(`${DONDE_GO_BASE}/events/${id}/?expand=place,dates,images`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
+    const res = await fetchDondeGoWithRetry(
+      `${DONDE_GO_BASE}/events/${id}/?expand=place,dates,images`,
+      8000,
+      1
+    );
+    if (!res) return null;
+    if (!res.ok) {
+      console.error(`DondeGo detail ${id} returned ${res.status}`);
+      return null;
+    }
     const d = await res.json();
     if (!d || !d.title) return null;
 
@@ -797,25 +832,32 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
 
 async function fetchDondeGoEvents(date: string | null): Promise<{ events: Experience[]; ok: boolean }> {
   try {
-    const res = await fetch(`${DONDE_GO_BASE}/events/?location=madrid&page_size=100`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok) {
-      console.error('DondeGo list fetch failed:', res.status, res.statusText);
+    const listRes = await fetchDondeGoWithRetry(
+      `${DONDE_GO_BASE}/events/?location=madrid&page_size=100`,
+      10000,
+      1
+    );
+    if (!listRes) {
+      console.error('DondeGo list fetch failed: network error');
       return { events: [], ok: false };
     }
-    const data = await res.json();
+    if (!listRes.ok) {
+      console.error('DondeGo list fetch failed:', listRes.status, listRes.statusText);
+      return { events: [], ok: false };
+    }
+    const data = await listRes.json();
     const results = data.results || [];
+    console.log('DondeGo list returned', results.length, 'events');
 
     const rawEvents: RawDondeGoEvent[] = [];
-    const batchSize = 5;
-    const maxBatches = 8; // cap at 40 detail requests to find future events while staying within serverless limits
+    const batchSize = 3; // smaller batches to avoid rate-limiting on shared serverless IPs
+    const maxBatches = 14; // up to 42 detail requests, but stop early once we have enough future events
     for (let i = 0; i < results.length && rawEvents.length < 16 && i < batchSize * maxBatches; i += batchSize) {
       const batch = results.slice(i, i + batchSize);
       const details = await Promise.all(batch.map((s: any) => fetchDondeGoEventDetail(s.id, date)));
       rawEvents.push(...(details.filter(Boolean) as RawDondeGoEvent[]));
     }
+    console.log('DondeGo kept', rawEvents.length, 'future events after detail filtering');
 
     const titles = rawEvents.map((r) => r.rawTitle);
     const descriptions = rawEvents.map((r) => r.rawDescription);
