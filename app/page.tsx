@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Experience, Filters, UserProfile, CompletedExperience, Comment, Plan, WeatherForecast } from '@/lib/types';
-import { curatedExperiences } from '@/data/experiences';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Experience,
+  Filters,
+  UserProfile,
+  CompletedExperience,
+  Comment,
+  Plan,
+  WeatherForecast,
+} from "@/lib/types";
+import { curatedExperiences } from "@/data/experiences";
 
 import {
   loadFilters,
@@ -13,25 +21,33 @@ import {
   getDefaultProfile,
   saveExperience,
   unsaveExperience,
-} from '@/lib/storage';
-import { calculatePoints, updateStreak, computeLevel, checkNewBadges, BADGES } from '@/lib/gamification';
-import BottomNav, { Tab } from '@/components/BottomNav';
-import FeedView from '@/components/FeedView';
-import ExploreView from '@/components/ExploreView';
-import AddExperienceForm from '@/components/AddExperienceForm';
-import ProfileView from '@/components/ProfileView';
-import NewBadgeToast from '@/components/NewBadgeToast';
-import AuthModal from '@/components/AuthModal';
-import SmartCarousels from '@/components/SmartCarousels';
-import MapView from '@/components/MapView';
-import { Sparkles, LogOut, Crown } from 'lucide-react';
+} from "@/lib/storage";
+import {
+  calculatePoints,
+  updateStreak,
+  computeLevel,
+  checkNewBadges,
+  BADGES,
+} from "@/lib/gamification";
+import BottomNav, { Tab } from "@/components/BottomNav";
+import FeedView from "@/components/FeedView";
+import ExploreView from "@/components/ExploreView";
+import AddExperienceForm from "@/components/AddExperienceForm";
+import ProfileView from "@/components/ProfileView";
+import NewBadgeToast from "@/components/NewBadgeToast";
+import AuthModal from "@/components/AuthModal";
+import SmartCarousels from "@/components/SmartCarousels";
+import MapView from "@/components/MapView";
+import { Sparkles, LogOut, Crown } from "lucide-react";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [filters, setFilters] = useState<Filters | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('feed');
-  const [prefilledExperienceId, setPrefilledExperienceId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("feed");
+  const [prefilledExperienceId, setPrefilledExperienceId] = useState<
+    string | null
+  >(null);
   const [surprise, setSurprise] = useState<Experience | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newBadges, setNewBadges] = useState<string[]>([]);
@@ -46,7 +62,7 @@ export default function Home() {
 
     const fetchForecast = async () => {
       try {
-        const res = await fetch('/api/weather');
+        const res = await fetch("/api/weather");
         if (!res.ok) return;
         const data = await res.json();
         setForecast(data);
@@ -71,10 +87,12 @@ export default function Home() {
     const fetchLive = async () => {
       setLoadingLive(true);
       try {
-        const types = filters.types.join(',');
-        const dateParam = filters.date ? `&date=${encodeURIComponent(filters.date)}` : '';
+        const types = filters.types.join(",");
+        const dateParam = filters.date
+          ? `&date=${encodeURIComponent(filters.date)}`
+          : "";
         const res = await fetch(
-          `/api/experiences?types=${encodeURIComponent(types)}${dateParam}`
+          `/api/experiences?types=${encodeURIComponent(types)}${dateParam}`,
         );
         const data = await res.json();
         setExperiences(data.experiences);
@@ -91,19 +109,27 @@ export default function Home() {
   const filteredExperiences = useMemo(() => {
     if (!filters) return [];
     return experiences.filter((exp) => {
-      if (filters.types.length > 0 && !filters.types.includes(exp.type)) return false;
+      if (filters.types.length > 0 && !filters.types.includes(exp.type))
+        return false;
       if (exp.budget > filters.budget) return false;
       if (exp.distanceKm > filters.maxDistance) return false;
-      if (filters.vibe !== 'any' && exp.vibe !== filters.vibe) return false;
-      if (filters.dareLevel !== 'any' && Math.abs(exp.dareLevel - (filters.dareLevel as number)) > 1) return false;
+      if (filters.vibe !== "any" && exp.vibe !== filters.vibe) return false;
+      if (
+        filters.dareLevel !== "any" &&
+        Math.abs(exp.dareLevel - (filters.dareLevel as number)) > 1
+      )
+        return false;
       return true;
     });
   }, [filters, experiences]);
 
-  const allProfiles = useMemo(() => (profile ? loadAllProfiles(profile) : []), [profile]);
+  const allProfiles = useMemo(
+    () => (profile ? loadAllProfiles(profile) : []),
+    [profile],
+  );
   const friendProfiles = useMemo(
-    () => allProfiles.filter((p) => p.email !== (profile?.email || 'me')),
-    [allProfiles, profile]
+    () => allProfiles.filter((p) => p.email !== (profile?.email || "me")),
+    [allProfiles, profile],
   );
 
   const generateSurprise = () => {
@@ -112,7 +138,10 @@ export default function Home() {
     setSurprise(null);
 
     setTimeout(() => {
-      const random = filteredExperiences[Math.floor(Math.random() * filteredExperiences.length)];
+      const random =
+        filteredExperiences[
+          Math.floor(Math.random() * filteredExperiences.length)
+        ];
       setSurprise(random);
       setIsGenerating(false);
     }, 700);
@@ -120,12 +149,12 @@ export default function Home() {
 
   const acceptDare = () => {
     if (!surprise || !profile) return;
-    logExperienceInternal(surprise.id, 0, '', undefined, [], {
+    logExperienceInternal(surprise.id, 0, "", undefined, [], {
       vibeRating: 0,
       valueRating: 0,
       uniquenessRating: 0,
       tags: [],
-      notes: '',
+      notes: "",
     });
     setSurprise(null);
   };
@@ -142,7 +171,7 @@ export default function Home() {
       uniquenessRating: number;
       tags: string[];
       notes: string;
-    }
+    },
   ) => {
     if (!profile) return;
     const experience = experiences.find((e) => e.id === experienceId);
@@ -187,7 +216,10 @@ export default function Home() {
 
     const newlyEarned = checkNewBadges(nextProfile);
     if (newlyEarned.length > 0) {
-      nextProfile.badges = [...nextProfile.badges, ...newlyEarned.map((b) => b.id)];
+      nextProfile.badges = [
+        ...nextProfile.badges,
+        ...newlyEarned.map((b) => b.id),
+      ];
       setNewBadges((prev) => [...prev, ...newlyEarned.map((b) => b.id)]);
     }
 
@@ -206,16 +238,23 @@ export default function Home() {
       uniquenessRating: number;
       tags: string[];
       notes: string;
-    }
+    },
   ) => {
-    logExperienceInternal(experienceId, rating, caption, photoUrl, sharedWith, details);
+    logExperienceInternal(
+      experienceId,
+      rating,
+      caption,
+      photoUrl,
+      sharedWith,
+      details,
+    );
     setPrefilledExperienceId(null);
-    setActiveTab('feed');
+    setActiveTab("feed");
   };
 
   const handleLogFromSurprise = (experience: Experience) => {
     setPrefilledExperienceId(experience.id);
-    setActiveTab('add');
+    setActiveTab("add");
     setSurprise(null);
   };
 
@@ -236,7 +275,7 @@ export default function Home() {
     const fresh = getDefaultProfile();
     setProfile(fresh);
     setSurprise(null);
-    setActiveTab('feed');
+    setActiveTab("feed");
     saveProfile(fresh);
   };
 
@@ -249,7 +288,10 @@ export default function Home() {
 
   const handleRemoveFriend = (email: string) => {
     if (!profile) return;
-    const next = { ...profile, friends: profile.friends.filter((e) => e !== email) };
+    const next = {
+      ...profile,
+      friends: profile.friends.filter((e) => e !== email),
+    };
     setProfile(next);
   };
 
@@ -265,7 +307,7 @@ export default function Home() {
     if (!profile) return;
     const exists = profile.plans.find((p) => p.experienceId === experience.id);
     if (exists) {
-      setActiveTab('profile');
+      setActiveTab("profile");
       return;
     }
     const plan: Plan = {
@@ -275,7 +317,7 @@ export default function Home() {
       attendees: [profile.email],
     };
     setProfile({ ...profile, plans: [...profile.plans, plan] });
-    setActiveTab('profile');
+    setActiveTab("profile");
   };
 
   const handleLeavePlan = (plan: Plan) => {
@@ -289,7 +331,7 @@ export default function Home() {
   const findCompletedIndex = (target: CompletedExperience) => {
     if (!profile) return -1;
     return profile.completed.findIndex(
-      (c) => c.id === target.id && c.completedAt === target.completedAt
+      (c) => c.id === target.id && c.completedAt === target.completedAt,
     );
   };
 
@@ -329,7 +371,7 @@ export default function Home() {
     const comment: Comment = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       authorEmail: profile.email,
-      authorName: profile.name || 'You',
+      authorName: profile.name || "You",
       text,
       createdAt: new Date().toISOString(),
     };
@@ -345,13 +387,15 @@ export default function Home() {
 
   if (!mounted || !profile || !filters) {
     return (
-      <main className="min-h-screen bg-freak-bg flex items-center justify-center">
+      <main className="flex items-center justify-center min-h-screen bg-freak-bg">
         <div className="text-center">
-          <div className="relative mx-auto mb-4 w-16 h-16">
+          <div className="relative w-16 h-16 mx-auto mb-4">
             <Crown className="w-16 h-16 text-freak-yellow animate-neon-pulse" />
-            <Sparkles className="w-6 h-6 text-freak-pink absolute -top-1 -right-2 animate-pulse" />
+            <Sparkles className="absolute w-6 h-6 text-freak-pink -top-1 -right-2 animate-pulse" />
           </div>
-          <p className="mt-3 text-white/80 font-bold tracking-wider uppercase">Loading Freakend...</p>
+          <p className="mt-3 font-bold tracking-wider uppercase text-white/80">
+            Loading Freakend...
+          </p>
         </div>
       </main>
     );
@@ -359,32 +403,37 @@ export default function Home() {
 
   const isLoggedIn = !!profile.email;
   const currentBadge = newBadges.length > 0 ? newBadges[0] : null;
-  const badge = currentBadge ? BADGES.find((b) => b.id === currentBadge) : undefined;
+  const badge = currentBadge
+    ? BADGES.find((b) => b.id === currentBadge)
+    : undefined;
 
   return (
-    <main className="min-h-screen bg-freak-bg md:ml-20 pb-20 md:pb-0">
+    <main className="min-h-screen pb-20 bg-freak-bg md:ml-20 md:pb-0">
       <BottomNav active={activeTab} onChange={setActiveTab} />
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-freak-bg/90 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center justify-between max-w-5xl px-4 py-3 mx-auto">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-freak-pink to-freak-purple flex items-center justify-center shadow-neon-pink">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-freak-pink to-freak-purple shadow-neon-pink">
                 <Crown className="w-5 h-5 text-white" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-freak-yellow rounded-full animate-pulse" />
+              <div className="absolute w-3 h-3 rounded-full -top-1 -right-1 bg-freak-yellow animate-pulse" />
             </div>
             <div className="min-w-0">
-              <h1 className="comic-text text-xl sm:text-2xl leading-none gradient-text">FREAKEND</h1>
-              <p className="text-[10px] text-freak-cyan font-bold tracking-widest uppercase truncate">One pull away from a story.</p>
+              <h1 className="text-xl leading-none comic-text sm:text-2xl gradient-text">
+                FREAKEND
+              </h1>
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="text-sm font-black text-freak-yellow neon-text-yellow">{profile.points} PTS</div>
+            <div className="text-sm font-black text-freak-yellow neon-text-yellow">
+              {profile.points} PTS
+            </div>
             {isLoggedIn && (
               <button
                 onClick={handleLogout}
-                className="text-xs font-bold text-white/60 hover:text-freak-pink flex items-center gap-1 transition-colors"
+                className="flex items-center gap-1 text-xs font-bold transition-colors text-white/60 hover:text-freak-pink"
               >
                 <LogOut className="w-3 h-3" /> EXIT
               </button>
@@ -393,8 +442,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        {activeTab === 'feed' && (
+      <div className="max-w-5xl px-4 py-6 mx-auto">
+        {activeTab === "feed" && (
           <>
             <SmartCarousels
               experiences={experiences}
@@ -417,7 +466,7 @@ export default function Home() {
           </>
         )}
 
-        {activeTab === 'explore' && (
+        {activeTab === "explore" && (
           <ExploreView
             filters={filters}
             onFiltersChange={setFilters}
@@ -437,7 +486,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === 'map' && (
+        {activeTab === "map" && (
           <MapView
             experiences={experiences}
             curatedExperiences={curatedExperiences}
@@ -447,7 +496,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === 'add' && (
+        {activeTab === "add" && (
           <AddExperienceForm
             experiences={experiences}
             prefilledExperienceId={prefilledExperienceId}
@@ -456,7 +505,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === 'profile' && (
+        {activeTab === "profile" && (
           <ProfileView
             profile={profile}
             experiences={experiences}
