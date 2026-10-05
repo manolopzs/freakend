@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { Experience, UserProfile } from '@/lib/types';
-import { MapPin, Navigation, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { Experience, UserProfile } from "@/lib/types";
+import {
+  MapPin,
+  Navigation,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+} from "lucide-react";
 
 interface Props {
   experiences: Experience[];
@@ -12,7 +18,13 @@ interface Props {
   onWantToGo?: (experience: Experience) => void;
 }
 
-export default function MapView({ experiences, curatedExperiences = [], currentProfile, onToggleSave, onWantToGo }: Props) {
+export default function MapView({
+  experiences,
+  curatedExperiences = [],
+  currentProfile,
+  onToggleSave,
+  onWantToGo,
+}: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const zones = useMemo(() => {
@@ -27,8 +39,9 @@ export default function MapView({ experiences, curatedExperiences = [], currentP
       .map(([neighborhood, items]) => ({
         neighborhood,
         items: items.sort((a, b) => a.distanceKm - b.distanceKm),
-        pin: items[0]?.emoji || '📍',
-        avgDistance: items.reduce((sum, i) => sum + i.distanceKm, 0) / items.length,
+        pin: items[0]?.emoji || "📍",
+        avgDistance:
+          items.reduce((sum, i) => sum + i.distanceKm, 0) / items.length,
       }))
       .sort((a, b) => a.avgDistance - b.avgDistance);
   }, [experiences]);
@@ -39,49 +52,54 @@ export default function MapView({ experiences, curatedExperiences = [], currentP
 
   if (zones.length === 0) {
     return (
-      <div className="comic-panel p-6 text-center">
-        <div className="text-4xl mb-3">🗺️</div>
-        <h3 className="comic-text text-xl mb-2 gradient-text">Map is empty</h3>
-        <p className="text-white/60 text-sm">No experiences available to map right now.</p>
+      <div className="p-6 text-center comic-panel">
+        <div className="mb-3 text-4xl">🗺️</div>
+        <h3 className="mb-2 text-xl comic-text gradient-text">Map is empty</h3>
+        <p className="text-sm text-white/60">
+          No experiences available to map right now.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <div className="comic-panel p-5">
-        <h2 className="comic-text text-2xl gradient-text flex items-center gap-2">
+      <div className="p-5 comic-panel">
+        <h2 className="flex items-center gap-2 text-2xl comic-text gradient-text">
           <MapPin className="w-6 h-6 text-freak-pink" /> Map Discovery
         </h2>
-        <p className="text-white/60 text-sm mt-1">
-          Explore Madrid by neighborhood zones — no API key required.
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {zones.map((zone) => {
           const isOpen = !!expanded[zone.neighborhood];
-          const savedCount = zone.items.filter((i) => currentProfile.saved.includes(i.id)).length;
+          const savedCount = zone.items.filter((i) =>
+            currentProfile.saved.includes(i.id),
+          ).length;
           return (
             <div
               key={zone.neighborhood}
-              className="comic-card overflow-hidden transition-all"
+              className="overflow-hidden transition-all comic-card"
             >
               <button
                 onClick={() => toggle(zone.neighborhood)}
-                className="w-full p-4 text-left relative overflow-hidden group"
+                className="relative w-full p-4 overflow-hidden text-left group"
               >
                 <div className="absolute inset-0 halftone-bg opacity-20" />
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-freak-panel border-2 border-freak-cyan flex items-center justify-center text-2xl shadow-neon-cyan">
+                    <div className="flex items-center justify-center w-12 h-12 text-2xl border-2 rounded-full bg-freak-panel border-freak-cyan shadow-neon-cyan">
                       {zone.pin}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="comic-text text-base sm:text-lg text-white truncate">{zone.neighborhood}</h3>
+                      <h3 className="text-base text-white truncate comic-text sm:text-lg">
+                        {zone.neighborhood}
+                      </h3>
                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-white/50">
                         <Navigation className="w-3 h-3 text-freak-cyan shrink-0" />
-                        <span className="truncate">{zone.avgDistance.toFixed(1)} km avg</span>
+                        <span className="truncate">
+                          {zone.avgDistance.toFixed(1)} km avg
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -95,30 +113,34 @@ export default function MapView({ experiences, curatedExperiences = [], currentP
                       </span>
                     )}
                     {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-white/50 mt-1" />
+                      <ChevronUp className="w-4 h-4 mt-1 text-white/50" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-white/50 mt-1" />
+                      <ChevronDown className="w-4 h-4 mt-1 text-white/50" />
                     )}
                   </div>
                 </div>
               </button>
 
               {isOpen && (
-                <div className="border-t border-white/10 p-3 space-y-2">
+                <div className="p-3 space-y-2 border-t border-white/10">
                   {zone.items.map((exp) => {
                     const isSaved = currentProfile.saved.includes(exp.id);
                     return (
                       <div
                         key={exp.id}
-                        className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/10 hover:border-freak-cyan/40 transition-colors"
+                        className="flex items-center gap-3 p-2 transition-colors border rounded-xl bg-white/5 border-white/10 hover:border-freak-cyan/40"
                       >
                         <div className="text-2xl">{exp.emoji}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-black text-sm text-white line-clamp-2 break-words">{exp.title}</div>
+                          <div className="text-sm font-black text-white break-words line-clamp-2">
+                            {exp.title}
+                          </div>
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/50 font-black uppercase tracking-wider">
-                            <span className="truncate max-w-[45%]">{exp.type}</span>
+                            <span className="truncate max-w-[45%]">
+                              {exp.type}
+                            </span>
                             <span>{exp.distanceKm} km</span>
-                            <span>{'€'.repeat(exp.budget)}</span>
+                            <span>{"€".repeat(exp.budget)}</span>
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -127,11 +149,11 @@ export default function MapView({ experiences, curatedExperiences = [], currentP
                               onClick={() => onToggleSave(exp)}
                               className={`p-1.5 rounded-lg text-[10px] font-black uppercase border transition-all ${
                                 isSaved
-                                  ? 'bg-freak-yellow border-freak-yellow text-freak-bg'
-                                  : 'bg-white/5 border-white/20 text-white/70 hover:text-freak-yellow hover:border-freak-yellow'
+                                  ? "bg-freak-yellow border-freak-yellow text-freak-bg"
+                                  : "bg-white/5 border-white/20 text-white/70 hover:text-freak-yellow hover:border-freak-yellow"
                               }`}
                             >
-                              {isSaved ? 'Saved' : 'Save'}
+                              {isSaved ? "Saved" : "Save"}
                             </button>
                           )}
                           {onWantToGo && (
