@@ -806,8 +806,8 @@ async function fetchDondeGoEventDetail(id: number, date: string | null): Promise
   try {
     const res = await fetchDondeGoWithRetry(
       `${DONDE_GO_BASE}/events/${id}/?expand=place,dates,images`,
-      8000,
-      1
+      4000,
+      0
     );
     if (!res) return null;
     if (!res.ok) {
@@ -877,8 +877,8 @@ async function fetchDondeGoEvents(
   try {
     const listRes = await fetchDondeGoWithRetry(
       `${DONDE_GO_BASE}/events/?location=madrid&page_size=100`,
-      10000,
-      1
+      5000,
+      0
     );
     if (!listRes) {
       debugInfo.listError = 'network/timeout after retry';
@@ -898,7 +898,7 @@ async function fetchDondeGoEvents(
 
     const rawEvents: RawDondeGoEvent[] = [];
     const batchSize = 3; // smaller batches to avoid rate-limiting on shared serverless IPs
-    const maxBatches = 14; // up to 42 detail requests, but stop early once we have enough future events
+    const maxBatches = 8; // up to 24 detail requests to stay well under serverless timeouts
     const sampledIds = results.slice(0, batchSize * maxBatches).map((s: any) => s.id);
     debugInfo.scannedIds = sampledIds.slice(0, 12);
     debugInfo.scannedCount = sampledIds.length;
@@ -989,12 +989,13 @@ export async function GET(request: NextRequest) {
   const madridOk = madrid.ok;
   const dondegoOk = dondego.ok;
 
-  // Inject generated high-dare curated events (level 4/5) because real APIs rarely offer them.
-  const highDareCurated = curatedExperiences.filter(
-    (e) => e.dareLevel >= 4 && types.includes(e.type)
+  // Inject generated curated dares for levels 3+ so the freak-o-meter has real range.
+  // Levels 1-2 come from real APIs only.
+  const generatedCurated = curatedExperiences.filter(
+    (e) => e.dareLevel >= 3 && types.includes(e.type)
   );
 
-  const filtered = [...liveResults, ...highDareCurated].filter((exp) => types.includes(exp.type));
+  const filtered = [...liveResults, ...generatedCurated].filter((exp) => types.includes(exp.type));
 
   return NextResponse.json({
     experiences: filtered,
